@@ -21,17 +21,25 @@ import requests
 
 API_ENDPOINT = "https://en.wikipedia.org/w/api.php"
 
+# Wikimedia API policy: identify your client with a clear User-Agent.
+HEADERS = {
+    "User-Agent": "WikiGraphCrawler/0.1 (szimpfer@uvm.edu)",
+}
+
 # Crawl controls
-MAX_PAGES = 500
-MAX_LINKS_PER_PAGE = 50
+MAX_PAGES = 20 # 500
+MAX_LINKS_PER_PAGE = 10 # 50
 
 # Polite delay between HTTP requests (seconds)
 REQUEST_DELAY_S = 0.1
 
-# Default paths
-SEEDS_PATH = Path("seeds/seed_pages.json")
-PAGES_OUT_PATH = Path("data/pages.jsonl")
-LINKS_OUT_PATH = Path("data/links.jsonl")
+# Default paths (resolve relative to this file so execution from repo root works)
+DATA_LOADING_DIR = Path(__file__).resolve().parent
+REPO_ROOT = DATA_LOADING_DIR.parent
+
+SEEDS_PATH = DATA_LOADING_DIR / "seeds" / "seed_pages.json"
+PAGES_OUT_PATH = REPO_ROOT / "data" / "pages.jsonl"
+LINKS_OUT_PATH = REPO_ROOT / "data" / "links.jsonl"
 
 # Module-level file handles used by write_* functions (opened in crawl_dataset).
 _PAGES_FH: Optional[Any] = None
@@ -59,7 +67,7 @@ def load_seeds(path: str | Path) -> List[str]:
 
 def _api_get(params: Dict[str, Any]) -> Dict[str, Any]:
     """Perform a MediaWiki API GET request with basic error handling and rate limiting."""
-    resp = requests.get(API_ENDPOINT, params=params, timeout=30)
+    resp = requests.get(API_ENDPOINT, params=params, headers=HEADERS, timeout=30)
     resp.raise_for_status()
     time.sleep(REQUEST_DELAY_S)
     return resp.json()
