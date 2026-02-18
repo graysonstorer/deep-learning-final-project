@@ -12,6 +12,7 @@ Outputs (JSONL):
 from __future__ import annotations
 
 import json
+import random
 import time
 from collections import deque
 from pathlib import Path
@@ -27,8 +28,12 @@ HEADERS = {
 }
 
 # Crawl controls
-MAX_PAGES = 20 # 500
-MAX_LINKS_PER_PAGE = 10 # 50
+MAX_PAGES = 100
+MAX_LINKS_PER_PAGE = 10
+
+# Randomization controls
+RANDOMIZE_LINK_SAMPLING = True
+RANDOM_SEED = 42  # Set to None for full stochasticity
 
 # Polite delay between HTTP requests (seconds)
 REQUEST_DELAY_S = 0.1
@@ -37,7 +42,7 @@ REQUEST_DELAY_S = 0.1
 DATA_LOADING_DIR = Path(__file__).resolve().parent
 REPO_ROOT = DATA_LOADING_DIR.parent
 
-SEEDS_PATH = DATA_LOADING_DIR / "seeds" / "seed_pages.json"
+SEEDS_PATH = DATA_LOADING_DIR / "seeds" / "basic_seeds.json"
 PAGES_OUT_PATH = REPO_ROOT / "data" / "pages.jsonl"
 LINKS_OUT_PATH = REPO_ROOT / "data" / "links.jsonl"
 
@@ -175,7 +180,35 @@ def _chunked(seq: Sequence[str], chunk_size: int) -> Iterable[List[str]]:
         yield list(seq[i : i + chunk_size])
 
 
-def _fetch_page_ids(titles: Sequence[str]) -> Dict[str, int]:
+def _is_excluded_title(title: str) -> bool:
+    """Return True if page title should be excluded from dataset."""
+    t = title.strip().lower()
+    if not t:
+        return True
+
+    # List pages
+    if t.startswith("list of"):
+        return True
+
+    # Glossaries / indices
+    if t.startswith("glossary of"):
+        return True
+
+    if "index of" in t:
+        return True
+
+    # Disambiguation handled separately via pageprops, but keep defensive fallback.
+    if "(disambiguation)" in t:
+        return True
+
+    return False
+
+
+def _fetch_page_ids(
+    titles: Sequence[str],
+    stats: Optional[Dict[str, int]] = None,
+    debug: bool = False,
+) -> Dict[str, int]:
     """
     Resolve page IDs for a list of titles.
 
@@ -189,6 +222,7 @@ def _fetch_page_ids(titles: Sequence[str]) -> Dict[str, int]:
     joined = "|".join(titles)
     params: Dict[str, Any] = {
         "action": "query",
+        "prop": "pageprops",
         "titles": joined,
         "format": "json",
         "redirects": 1,
@@ -206,10 +240,28 @@ def _fetch_page_ids(titles: Sequence[str]) -> Dict[str, int]:
             continue
         if page_obj.get("missing") is not None:
             continue
-        pid = page_obj.get("pageid")
+        if isinstance(page_obj.get("pageprops"), dict) and "disambiguation" in page_obj["pageprops"]:
+            if stats is not None:
+                stats["excluded_disambig_count"] = stats.get("excluded_disambig_count", 0) + 1
+            continue
+        pid_raw = page_obj.get("pageid")
         t = page_obj.get("title")
-        if isinstance(pid, int) and isinstance(t, str) and t.strip():
+
+        # Normalize page_id type (MediaWiki may return str or int)
+        try:
+            pid = int(pid_raw)
+        except (TypeError, ValueError):
+            continue
+
+        if isinstance(t, str) and t.strip():
+            if _is_excluded_title(t):
+                if stats is not None:
+                    stats["excluded_title_count"] = stats.get("excluded_title_count", 0) + 1
+                continue
+
             out[t] = pid
+            if debug:
+                print(f"Resolved seed: {t} → {pid}")
     return out
 
 
@@ -247,15 +299,45 @@ def crawl_dataset(
     - Extracts up to max_links_per_page outgoing links per crawled page
     - Ensures no duplicate pages and no duplicate edges in the output files
     """
+    print("SEEDS PATH:", seeds_path)
+
     seeds = load_seeds(seeds_path)
+
+    print("SEED COUNT:", len(seeds))
+    print("FIRST 5:", seeds[:5])
+
     if not seeds:
         raise ValueError("Seed list is empty.")
 
+    excluded_title_count = 0
+    excluded_disambig_count = 0
+    self_loop_count = 0
+    stats: Dict[str, int] = {}
+
+    if RANDOM_SEED is not None:
+        random.seed(RANDOM_SEED)
+
     # Canonicalize seeds before queue initialization to avoid duplicate enqueue paths
     # (e.g., raw title + redirected canonical title).
-    resolved_seeds = _fetch_page_ids(seeds)  # {canonical_title: page_id}
+    #
+    # MediaWiki limits the number of titles per query (commonly 50 for non-bot clients),
+    # so resolve seeds in batches to avoid empty results from API errors.
+    resolved_seeds: Dict[str, int] = {}
+    for chunk in _chunked(seeds, 50):
+        resolved_seeds.update(_fetch_page_ids(chunk, stats=stats, debug=True))  # {canonical_title: page_id}
+
+    print("RESOLVED:", len(resolved_seeds))
+    print("FIRST 5:", list(resolved_seeds.items())[:5])
+
     if not resolved_seeds:
         raise ValueError("No valid seed pages could be resolved to page IDs.")
+
+    # Filter titles during seed resolution (defensive; also handled in _fetch_page_ids).
+    pre_filter_seed_count = len(resolved_seeds)
+    resolved_seeds = {
+        title: pid for title, pid in resolved_seeds.items() if not _is_excluded_title(title)
+    }
+    excluded_title_count += pre_filter_seed_count - len(resolved_seeds)
     if len(resolved_seeds) > max_pages:
         # Respect dataset cap even at initialization time.
         resolved_seeds = dict(list(resolved_seeds.items())[:max_pages])
@@ -297,6 +379,11 @@ def crawl_dataset(
                 # Skip missing pages.
                 continue
 
+            # Filter during page ingestion.
+            if _is_excluded_title(canonical_title):
+                excluded_title_count += 1
+                continue
+
             # Include this page in dataset if possible.
             if page_id not in known_pages:
                 if len(known_pages) >= max_pages:
@@ -312,16 +399,57 @@ def crawl_dataset(
                 continue
             visited.add(page_id)
 
-            # Restrict links per page (dedup already handled).
-            outgoing_titles = outgoing_titles[:max_links_per_page]
+            # Filter outgoing links before random sampling/truncation/queue insertion.
+            pre_filter_outgoing = len(outgoing_titles)
+            outgoing_titles = [t for t in outgoing_titles if not _is_excluded_title(t)]
+            excluded_title_count += pre_filter_outgoing - len(outgoing_titles)
+
+            original_links_count = len(outgoing_titles)
+
+            # De-alphabetize link selection before applying the per-page cap.
+            # Keep list semantics and deterministic behavior (randomization only via RNG seed).
+            links = list(outgoing_titles)
+
+            if RANDOMIZE_LINK_SAMPLING:
+                random.shuffle(links)
+
+                buckets: Dict[str, List[str]] = {}
+                for link in links:
+                    if not link:
+                        continue
+                    first_char = link[0].upper()
+                    buckets.setdefault(first_char, []).append(link)
+
+                balanced_links: List[str] = []
+                # Round-robin sampling across buckets
+                while buckets and len(balanced_links) < max_links_per_page:
+                    for char in list(buckets.keys()):
+                        if buckets[char]:
+                            balanced_links.append(buckets[char].pop(0))
+                            if len(balanced_links) >= max_links_per_page:
+                                break
+                        if not buckets.get(char):
+                            buckets.pop(char, None)
+
+                links = balanced_links
+            else:
+                links = links[:max_links_per_page]
+
+            print(
+                f"[LINK SAMPLING] {canonical_title}: selected {len(links)} / "
+                f"{original_links_count} links"
+            )
 
             # Resolve IDs for outgoing titles in batches to reduce requests.
             resolved: Dict[str, int] = {}
-            for chunk in _chunked(outgoing_titles, 50):
-                resolved.update(_fetch_page_ids(chunk))
+            for chunk in _chunked(links, 50):
+                resolved.update(_fetch_page_ids(chunk, stats=stats))
 
             # Add targets to dataset (reserve) until dataset cap is reached.
             for target_title, target_id in resolved.items():
+                if _is_excluded_title(target_title):
+                    excluded_title_count += 1
+                    continue
                 if target_id not in known_pages:
                     if len(known_pages) >= max_pages:
                         continue
@@ -331,6 +459,9 @@ def crawl_dataset(
 
                 edge = (page_id, target_id)
                 if edge in edges_written:
+                    continue
+                if page_id == target_id:
+                    self_loop_count += 1
                     continue
                 edges_written.add(edge)
                 write_link({"source_id": page_id, "target_id": target_id})
@@ -347,6 +478,13 @@ def crawl_dataset(
                 f"Queue size: {len(q)} | "
                 f"Edges written: {len(edges_written)}"
             )
+
+        excluded_title_count += stats.get("excluded_title_count", 0)
+        excluded_disambig_count += stats.get("excluded_disambig_count", 0)
+        print("=== Crawl Hygiene Summary ===")
+        print(f"Excluded titles: {excluded_title_count}")
+        print(f"Excluded disambiguation pages: {excluded_disambig_count}")
+        print(f"Removed self-loops: {self_loop_count}")
     finally:
         if _PAGES_FH is not None:
             _PAGES_FH.close()

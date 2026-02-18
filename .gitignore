@@ -7,4 +7,5 @@ pycache/
 .DS_Store
 data/*.jsonl
 data/.jsonl
+diff.txt
 
