@@ -28,8 +28,8 @@ HEADERS = {
 }
 
 # Crawl controls
-MAX_PAGES = 100
-MAX_LINKS_PER_PAGE = 10
+MAX_PAGES = 500
+MAX_LINKS_PER_PAGE = 50
 
 # Randomization controls
 RANDOMIZE_LINK_SAMPLING = True
