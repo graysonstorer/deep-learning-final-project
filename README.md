@@ -29,6 +29,14 @@ This will create/overwrite:
 - `data/pages.jsonl`
 - `data/links.jsonl`
 
+Post-crawl sanitization (Phase 1):
+- Reads: `data/pages.jsonl`, `data/links.jsonl`
+- Writes: `data/pages_sanitized.jsonl` (adds cleaned extracts/categories + link metadata; safe to run without re-crawling)
+
+```bash
+python3 data-loading/migrate_pages.py
+```
+
 
 ### References: 
 

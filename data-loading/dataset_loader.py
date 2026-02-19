@@ -28,8 +28,8 @@ HEADERS = {
 }
 
 # Crawl controls
-MAX_PAGES = 500
-MAX_LINKS_PER_PAGE = 50
+MAX_PAGES = 100
+MAX_LINKS_PER_PAGE = 10
 
 # Randomization controls
 RANDOMIZE_LINK_SAMPLING = True
@@ -265,12 +265,135 @@ def _fetch_page_ids(
     return out
 
 
+def _clean_extract(text: str) -> str:
+    """Minimal sanitation for extracts before storing."""
+    s = text.strip().replace("\n", " ")
+    while "  " in s:
+        s = s.replace("  ", " ")
+    return s
+
+
+def fetch_page_metadata(page_ids: List[int]) -> Dict[int, Dict[str, Any]]:
+    """
+    Batch fetch page intro extracts + categories for up to ~50 pages at once.
+
+    Returns:
+      {page_id: {"extract": str, "categories": [str]}}
+    """
+    if not page_ids:
+        return {}
+
+    # Default structure for all requested page ids (ensures keys exist).
+    out: Dict[int, Dict[str, Any]] = {
+        int(pid): {"extract": "", "categories": []} for pid in page_ids if isinstance(pid, int)
+    }
+    if not out:
+        return {}
+
+    # Track per-page category deduplication during continuation.
+    seen_cats: Dict[int, Set[str]] = {pid: set() for pid in out.keys()}
+
+    params_base: Dict[str, Any] = {
+        "action": "query",
+        "format": "json",
+        "pageids": "|".join(str(pid) for pid in out.keys()),
+        "prop": "extracts|categories",
+        "exintro": 1,
+        "explaintext": 1,
+        "cllimit": "max",
+    }
+
+    cont: Dict[str, Any] = {}
+    attempts_left = 2  # retry once
+
+    while True:
+        try:
+            params = dict(params_base)
+            params.update(cont)
+            response = _api_get(params)
+        except Exception as e:
+            attempts_left -= 1
+            if attempts_left <= 0:
+                print(f"[metadata] WARNING: metadata fetch failed ({e}). Using empty defaults.")
+                return out
+            time.sleep(0.5)
+            continue
+
+        pages = (response.get("query") or {}).get("pages") or {}
+        if isinstance(pages, dict):
+            for page_obj in pages.values():
+                if not isinstance(page_obj, dict):
+                    continue
+                pid_raw = page_obj.get("pageid")
+                try:
+                    pid = int(pid_raw)
+                except (TypeError, ValueError):
+                    continue
+                if pid not in out:
+                    continue
+
+                extract = page_obj.get("extract")
+                if isinstance(extract, str) and extract.strip():
+                    out[pid]["extract"] = _clean_extract(extract)
+
+                cats = page_obj.get("categories") or []
+                if isinstance(cats, list):
+                    for c in cats:
+                        if not isinstance(c, dict):
+                            continue
+                        ct = c.get("title")
+                        if not isinstance(ct, str) or not ct.strip():
+                            continue
+                        name = ct
+                        if name.startswith("Category:"):
+                            name = name[len("Category:") :]
+                        name = name.strip()
+                        if not name or name in seen_cats[pid]:
+                            continue
+                        seen_cats[pid].add(name)
+                        out[pid]["categories"].append(name)
+
+        cont_obj = response.get("continue")
+        if isinstance(cont_obj, dict) and cont_obj.get("clcontinue"):
+            # MediaWiki continuation requires the 'continue' token as well.
+            cont = {
+                "clcontinue": cont_obj.get("clcontinue"),
+                "continue": cont_obj.get("continue"),
+            }
+            continue
+
+        break
+
+    return out
+
+
 def write_page(record: Dict[str, Any]) -> None:
     """Write a single page record as one JSON line to data/pages.jsonl."""
     global _PAGES_FH
     if _PAGES_FH is None:
         raise RuntimeError("Pages writer is not initialized. Call crawl_dataset() first.")
-    _PAGES_FH.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    # Backward-compatible schema enforcement: always include extract + categories keys.
+    page_id = record.get("page_id")
+    try:
+        pid = int(page_id)
+    except (TypeError, ValueError):
+        return
+    title = record.get("title") if isinstance(record.get("title"), str) else ""
+    extract = record.get("extract") if isinstance(record.get("extract"), str) else ""
+    categories_raw = record.get("categories")
+    categories: List[str] = []
+    if isinstance(categories_raw, list):
+        categories = [c for c in categories_raw if isinstance(c, str)]
+
+    out_record = {
+        "page_id": pid,
+        "title": title,
+        "extract": extract,
+        "categories": categories,
+    }
+
+    _PAGES_FH.write(json.dumps(out_record, ensure_ascii=False) + "\n")
     _PAGES_FH.flush()
 
 
@@ -313,6 +436,13 @@ def crawl_dataset(
     excluded_disambig_count = 0
     self_loop_count = 0
     stats: Dict[str, int] = {}
+
+    metadata_cache: Dict[int, Dict[str, Any]] = {}
+    pending_page_ids: List[int] = []
+    written_pages: Set[int] = set()
+    pages_enriched = 0
+    missing_extracts = 0
+    missing_categories = 0
 
     if RANDOM_SEED is not None:
         random.seed(RANDOM_SEED)
@@ -367,9 +497,49 @@ def crawl_dataset(
     _PAGES_FH = pages_path.open("w", encoding="utf-8")
     _LINKS_FH = links_path.open("w", encoding="utf-8")
     try:
-        # Write resolved seed pages first (one record per page).
-        for page_id, title in known_pages.items():
-            write_page({"page_id": page_id, "title": title})
+        def _queue_page_for_write(pid: int) -> None:
+            if pid in written_pages:
+                return
+            if pid in pending_page_ids:
+                return
+            pending_page_ids.append(pid)
+
+        def _flush_pending_pages(force: bool = False) -> None:
+            nonlocal pages_enriched, missing_extracts, missing_categories
+            while pending_page_ids and (force or len(pending_page_ids) >= 50):
+                batch = pending_page_ids[:50]
+                del pending_page_ids[:50]
+
+                # Only fetch for pages not already cached.
+                to_fetch = [pid for pid in batch if pid not in metadata_cache]
+                if to_fetch:
+                    meta = fetch_page_metadata(to_fetch)
+                    metadata_cache.update(meta)
+
+                for pid in batch:
+                    title = known_pages.get(pid, "")
+                    meta = metadata_cache.get(pid, {"extract": "", "categories": []})
+                    extract = meta.get("extract") if isinstance(meta.get("extract"), str) else ""
+                    categories = meta.get("categories") if isinstance(meta.get("categories"), list) else []
+                    write_page(
+                        {
+                            "page_id": pid,
+                            "title": title,
+                            "extract": extract,
+                            "categories": categories,
+                        }
+                    )
+                    written_pages.add(pid)
+                    pages_enriched += 1
+                    if not extract:
+                        missing_extracts += 1
+                    if not categories:
+                        missing_categories += 1
+
+        # Queue and flush resolved seed pages first (batched enrichment).
+        for page_id in known_pages.keys():
+            _queue_page_for_write(page_id)
+        _flush_pending_pages(force=True)
 
         while q and len(visited) < max_pages:
             current_title = q.popleft()
@@ -391,13 +561,16 @@ def crawl_dataset(
                     break
                 known_pages[page_id] = canonical_title
                 title_to_id[canonical_title] = page_id
-                write_page({"page_id": page_id, "title": canonical_title})
+                _queue_page_for_write(page_id)
             else:
                 title_to_id[canonical_title] = page_id
 
             if page_id in visited:
                 continue
             visited.add(page_id)
+
+            # Flush newly discovered pages periodically in batches.
+            _flush_pending_pages(force=False)
 
             # Filter outgoing links before random sampling/truncation/queue insertion.
             pre_filter_outgoing = len(outgoing_titles)
@@ -455,7 +628,7 @@ def crawl_dataset(
                         continue
                     known_pages[target_id] = target_title
                     title_to_id[target_title] = target_id
-                    write_page({"page_id": target_id, "title": target_title})
+                    _queue_page_for_write(target_id)
 
                 edge = (page_id, target_id)
                 if edge in edges_written:
@@ -479,12 +652,20 @@ def crawl_dataset(
                 f"Edges written: {len(edges_written)}"
             )
 
+        # Flush any remaining page records.
+        _flush_pending_pages(force=True)
+
         excluded_title_count += stats.get("excluded_title_count", 0)
         excluded_disambig_count += stats.get("excluded_disambig_count", 0)
         print("=== Crawl Hygiene Summary ===")
         print(f"Excluded titles: {excluded_title_count}")
         print(f"Excluded disambiguation pages: {excluded_disambig_count}")
         print(f"Removed self-loops: {self_loop_count}")
+
+        print("=== Metadata Summary ===")
+        print(f"[metadata] Pages enriched: {pages_enriched}")
+        print(f"[metadata] Missing extracts: {missing_extracts}")
+        print(f"[metadata] Missing categories: {missing_categories}")
     finally:
         if _PAGES_FH is not None:
             _PAGES_FH.close()

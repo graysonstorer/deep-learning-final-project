@@ -97,6 +97,8 @@ def build_graph(
       (G, id_to_title)
     """
     # Support current repo's JSONL artifacts as a fallback (without changing defaults).
+    # Prefer sanitized pages if present.
+    pages_path = _default_fallback(pages_path, Path("data/pages_sanitized.jsonl"))
     pages_path = _default_fallback(pages_path, Path("data/pages.jsonl"))
     links_path = _default_fallback(links_path, Path("data/links.jsonl"))
 
