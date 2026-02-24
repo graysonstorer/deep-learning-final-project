@@ -13,9 +13,9 @@ from typing import Any, Dict, Iterable, Iterator, Tuple
 
 import networkx as nx
 
-# Configurable default paths (as requested)
-PAGES_PATH = Path("../data-loading/output/pages.json")
-LINKS_PATH = Path("../data-loading/output/links.json")
+# Configurable default paths (canonical pipeline)
+PAGES_PATH = Path("../data/pages_sanitized.jsonl")
+LINKS_PATH = Path("../data/links_table.jsonl")
 
 
 def _iter_json_records(path: Path) -> Iterator[Dict[str, Any]]:
@@ -96,11 +96,9 @@ def build_graph(
     Returns:
       (G, id_to_title)
     """
-    # Support current repo's JSONL artifacts as a fallback (without changing defaults).
-    # Prefer sanitized pages if present.
+    # Support running from repo root (fallbacks relative to root).
     pages_path = _default_fallback(pages_path, Path("data/pages_sanitized.jsonl"))
-    pages_path = _default_fallback(pages_path, Path("data/pages.jsonl"))
-    links_path = _default_fallback(links_path, Path("data/links.jsonl"))
+    links_path = _default_fallback(links_path, Path("data/links_table.jsonl"))
 
     id_to_title: Dict[int, str] = {}
     title_to_id: Dict[str, int] = {}
@@ -127,8 +125,8 @@ def build_graph(
     skipped_edges = 0
     added_edges = 0
     for rec in _iter_json_records(links_path):
-        source_id = rec.get("source_id")
-        target_id = rec.get("target_id")
+        source_id = rec.get("source_page_id", rec.get("source_id"))
+        target_id = rec.get("target_page_id", rec.get("target_id"))
         try:
             sid = int(source_id)
             tid = int(target_id)

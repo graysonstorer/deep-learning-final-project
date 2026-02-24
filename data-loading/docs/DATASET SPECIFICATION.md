@@ -1,14 +1,18 @@
 DATASET SPECIFICATION — NORMALIZED GRAPH FORMAT
 
-File: data/pages.jsonl
+File: data/pages_raw.jsonl
 
 Description:
-Stores unique Wikipedia articles discovered during crawl.
+Stores raw Wikipedia page snapshots discovered during crawl (including semantic links).
 
 Schema:
 
 * page_id (int) — MediaWiki page ID
 * title (str) — Canonical article title
+* extract (str | null) — lead intro plaintext (if available)
+* categories ([str])
+* sections ([{section_title, level}])
+* links ([{target_title, anchor, section}])
 
 Example:
 {
@@ -24,15 +28,17 @@ Constraints:
 
 ---
 
-File: data/links.jsonl
+File: data/links_table.jsonl
 
 Description:
-Stores directed hyperlinks between articles.
+Stores directed hyperlinks between articles derived post-crawl from sanitized pages.
 
 Schema:
 
-* source_id (int)
-* target_id (int)
+* source_page_id (int)
+* target_page_id (int)
+* anchor_clean (str)
+* section_clean (str)
 
 Example:
 {
@@ -52,8 +58,8 @@ Graph Interpretation:
 
 G = (V, E)
 
-V = pages.jsonl records
-E = links.jsonl records
+V = pages_raw/pages_sanitized records
+E = links_table records
 
 Adjacency reconstruction handled downstream.
 

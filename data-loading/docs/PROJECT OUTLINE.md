@@ -18,8 +18,10 @@ Directory Structure:
 
 /wiki_graph_project
 /data
-pages.jsonl
-links.jsonl
+/pages_raw.jsonl
+/pages_sanitized.jsonl
+/links_table.jsonl
+/link_layer_report.json
 /seeds
 seed_pages.json
 /src
@@ -30,16 +32,22 @@ project_outline.md
 
 Dataset Units:
 
-Page Record (pages.jsonl):
+Raw Page Record (pages_raw.jsonl):
 {
 "page_id": int,
-"title": str
+"title": str,
+"extract": str | null,
+"categories": [str],
+"sections": [{"section_title": str, "level": int}],
+"links": [{"target_title": str, "anchor": str, "section": str | null}]
 }
 
-Link Record (links.jsonl):
+Link Record (links_table.jsonl):
 {
-"source_id": int,
-"target_id": int
+"source_page_id": int,
+"target_page_id": int,
+"anchor_clean": str,
+"section_clean": str
 }
 
 Acquisition Strategy:

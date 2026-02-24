@@ -5,14 +5,14 @@ This module crawls Wikipedia articles via the MediaWiki API and builds a small,
 normalized hyperlink graph using controlled BFS expansion.
 
 Outputs (JSONL):
-- data/pages.jsonl  : {"page_id": int, "title": str}
-- data/links.jsonl  : {"source_id": int, "target_id": int}
+- data/pages_raw.jsonl : canonical raw page snapshots with semantic links
 """
 
 from __future__ import annotations
 
 import json
 import random
+import re
 import time
 from collections import deque
 from pathlib import Path
@@ -28,8 +28,8 @@ HEADERS = {
 }
 
 # Crawl controls
-MAX_PAGES = 100
-MAX_LINKS_PER_PAGE = 10
+MAX_PAGES = 500
+MAX_LINKS_PER_PAGE = 50
 
 # Randomization controls
 RANDOMIZE_LINK_SAMPLING = True
@@ -43,12 +43,10 @@ DATA_LOADING_DIR = Path(__file__).resolve().parent
 REPO_ROOT = DATA_LOADING_DIR.parent
 
 SEEDS_PATH = DATA_LOADING_DIR / "seeds" / "basic_seeds.json"
-PAGES_OUT_PATH = REPO_ROOT / "data" / "pages.jsonl"
-LINKS_OUT_PATH = REPO_ROOT / "data" / "links.jsonl"
+PAGES_OUT_PATH = REPO_ROOT / "data" / "pages_raw.jsonl"
 
 # Module-level file handles used by write_* functions (opened in crawl_dataset).
 _PAGES_FH: Optional[Any] = None
-_LINKS_FH: Optional[Any] = None
 
 
 def load_seeds(path: str | Path) -> List[str]:
@@ -265,6 +263,206 @@ def _fetch_page_ids(
     return out
 
 
+_HEADING_RE = re.compile(r"^(?P<eq>={2,6})\s*(?P<title>[^=].*?)\s*(?P=eq)\s*$")
+_WIKILINK_RE = re.compile(r"\[\[([^\[\]]+?)\]\]")
+_IGNORED_PREFIXES = (
+    "File:",
+    "Category:",
+    "Template:",
+    "Help:",
+    "Wikipedia:",
+    "Special:",
+)
+
+
+def _parse_wikitext_sections_and_links(wikitext: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """
+    Parse wikitext to extract:
+    - sections: [{"section_title": str, "level": int}, ...]
+    - links: [{"target_title": str, "anchor": str, "section": str | None}, ...]
+    """
+    sections: List[Dict[str, Any]] = []
+    links: List[Dict[str, Any]] = []
+    seen_targets: Set[str] = set()
+
+    current_section: Optional[str] = None
+
+    for line in wikitext.splitlines():
+        m = _HEADING_RE.match(line.strip())
+        if m:
+            level = len(m.group("eq"))
+            title = m.group("title").strip()
+            if title:
+                current_section = title
+                sections.append({"section_title": title, "level": level})
+            continue
+
+        for lm in _WIKILINK_RE.finditer(line):
+            inner = lm.group(1).strip()
+            if not inner:
+                continue
+
+            # Ignore interwiki prefixes and leading colon forms.
+            if inner.startswith(":"):
+                inner = inner[1:].lstrip()
+
+            # Split on first pipe: [[target|anchor]]
+            if "|" in inner:
+                target_part, anchor_part = inner.split("|", 1)
+                anchor = anchor_part.strip()
+            else:
+                target_part, anchor = inner, ""
+
+            target_part = target_part.strip()
+            if not target_part:
+                continue
+
+            # Drop fragment identifiers
+            if "#" in target_part:
+                target_part = target_part.split("#", 1)[0].strip()
+            if not target_part:
+                continue
+
+            # Ignore namespaces/pseudo-pages
+            if any(target_part.startswith(p) for p in _IGNORED_PREFIXES):
+                continue
+            if ":" in target_part:
+                # Defensive: ignore any remaining namespace-style links.
+                continue
+
+            target_title = target_part.replace("_", " ").strip()
+            if not target_title:
+                continue
+
+            if target_title in seen_targets:
+                continue
+            seen_targets.add(target_title)
+
+            if not anchor:
+                anchor = target_title
+
+            links.append(
+                {
+                    "target_title": target_title,
+                    "anchor": anchor,
+                    "section": current_section,
+                }
+            )
+
+    return sections, links
+
+
+def fetch_page_raw(title: str) -> Tuple[Optional[int], Optional[str], Optional[str], List[str], List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """
+    Fetch canonical page metadata + wikitext and parse sections + semantic links.
+
+    Returns:
+      (page_id, canonical_title, extract_or_none, categories, sections, links)
+    """
+    clcontinue: Optional[str] = None
+    extract: Optional[str] = None
+    categories: List[str] = []
+    page_id: Optional[int] = None
+    canonical_title: Optional[str] = None
+    wikitext: str = ""
+
+    attempts_left = 2
+    while True:
+        try:
+            params: Dict[str, Any] = {
+                "action": "query",
+                "format": "json",
+                "titles": title,
+                "redirects": 1,
+                "prop": "extracts|categories|revisions|pageprops",
+                "exintro": 1,
+                "explaintext": 1,
+                "cllimit": "max",
+                "rvprop": "content",
+                "rvslots": "main",
+                "rvlimit": 1,
+            }
+            if clcontinue:
+                params["clcontinue"] = clcontinue
+
+            resp = _api_get(params)
+        except Exception as e:
+            attempts_left -= 1
+            if attempts_left <= 0:
+                print(f"[raw] WARNING: failed to fetch page '{title}' ({e})")
+                return None, None, None, [], [], []
+            time.sleep(0.5)
+            continue
+
+        pages = (resp.get("query") or {}).get("pages") or {}
+        if not isinstance(pages, dict) or not pages:
+            return None, None, None, [], [], []
+        page_obj = next(iter(pages.values()))
+        if not isinstance(page_obj, dict):
+            return None, None, None, [], [], []
+        if page_obj.get("missing") is not None:
+            return None, None, None, [], [], []
+
+        # Disambiguation skip
+        if isinstance(page_obj.get("pageprops"), dict) and "disambiguation" in page_obj["pageprops"]:
+            return None, None, None, [], [], []
+
+        try:
+            page_id = int(page_obj.get("pageid"))
+        except (TypeError, ValueError):
+            return None, None, None, [], [], []
+
+        t = page_obj.get("title")
+        canonical_title = t.strip() if isinstance(t, str) and t.strip() else None
+
+        ex = page_obj.get("extract")
+        if extract is None and isinstance(ex, str) and ex.strip():
+            extract = ex
+
+        # Categories may be continued across requests.
+        cats = page_obj.get("categories") or []
+        if isinstance(cats, list):
+            for c in cats:
+                if not isinstance(c, dict):
+                    continue
+                ct = c.get("title")
+                if not isinstance(ct, str) or not ct.strip():
+                    continue
+                name = ct
+                if name.startswith("Category:"):
+                    name = name[len("Category:") :]
+                name = name.strip()
+                if name and name not in categories:
+                    categories.append(name)
+
+        # Wikitext present in revisions (only need once)
+        if not wikitext:
+            revs = page_obj.get("revisions") or []
+            if isinstance(revs, list) and revs:
+                rev0 = revs[0]
+                if isinstance(rev0, dict):
+                    slots = rev0.get("slots")
+                    if isinstance(slots, dict):
+                        main = slots.get("main")
+                        if isinstance(main, dict):
+                            wt = main.get("*") or main.get("content")
+                            if isinstance(wt, str):
+                                wikitext = wt
+                    # Some API formats may return content at top-level
+                    if not wikitext:
+                        wt = rev0.get("*") or rev0.get("content")
+                        if isinstance(wt, str):
+                            wikitext = wt
+
+        cont = resp.get("continue")
+        if isinstance(cont, dict) and cont.get("clcontinue"):
+            clcontinue = str(cont["clcontinue"])
+            continue
+        break
+
+    sections, links = _parse_wikitext_sections_and_links(wikitext or "")
+    return page_id, canonical_title, extract if (isinstance(extract, str) and extract.strip()) else None, categories, sections, links
+
 def _clean_extract(text: str) -> str:
     """Minimal sanitation for extracts before storing."""
     s = text.strip().replace("\n", " ")
@@ -368,48 +566,75 @@ def fetch_page_metadata(page_ids: List[int]) -> Dict[int, Dict[str, Any]]:
 
 
 def write_page(record: Dict[str, Any]) -> None:
-    """Write a single page record as one JSON line to data/pages.jsonl."""
+    """Write a single page record as one JSON line to data/pages_raw.jsonl."""
     global _PAGES_FH
     if _PAGES_FH is None:
         raise RuntimeError("Pages writer is not initialized. Call crawl_dataset() first.")
 
-    # Backward-compatible schema enforcement: always include extract + categories keys.
     page_id = record.get("page_id")
     try:
         pid = int(page_id)
     except (TypeError, ValueError):
         return
+
     title = record.get("title") if isinstance(record.get("title"), str) else ""
-    extract = record.get("extract") if isinstance(record.get("extract"), str) else ""
+    extract = record.get("extract")
+    if not (extract is None or isinstance(extract, str)):
+        extract = None
+
     categories_raw = record.get("categories")
     categories: List[str] = []
     if isinstance(categories_raw, list):
         categories = [c for c in categories_raw if isinstance(c, str)]
 
+    sections_raw = record.get("sections")
+    sections: List[Dict[str, Any]] = []
+    if isinstance(sections_raw, list):
+        for s in sections_raw:
+            if not isinstance(s, dict):
+                continue
+            st = s.get("section_title")
+            lvl = s.get("level")
+            if isinstance(st, str) and st.strip():
+                try:
+                    ilvl = int(lvl)
+                except (TypeError, ValueError):
+                    ilvl = 0
+                sections.append({"section_title": st.strip(), "level": ilvl})
+
+    links_raw = record.get("links")
+    links: List[Dict[str, Any]] = []
+    if isinstance(links_raw, list):
+        for l in links_raw:
+            if not isinstance(l, dict):
+                continue
+            tt = l.get("target_title")
+            anch = l.get("anchor")
+            sec = l.get("section")
+            if isinstance(tt, str) and tt.strip():
+                link_obj: Dict[str, Any] = {
+                    "target_title": tt.strip(),
+                    "anchor": anch if isinstance(anch, str) and anch.strip() else tt.strip(),
+                    "section": sec if isinstance(sec, str) and sec.strip() else None,
+                }
+                links.append(link_obj)
+
     out_record = {
         "page_id": pid,
         "title": title,
-        "extract": extract,
+        "extract": extract if (isinstance(extract, str) and extract.strip()) else None,
         "categories": categories,
+        "sections": sections,
+        "links": links,
     }
 
     _PAGES_FH.write(json.dumps(out_record, ensure_ascii=False) + "\n")
     _PAGES_FH.flush()
 
 
-def write_link(record: Dict[str, Any]) -> None:
-    """Write a single link record as one JSON line to data/links.jsonl."""
-    global _LINKS_FH
-    if _LINKS_FH is None:
-        raise RuntimeError("Links writer is not initialized. Call crawl_dataset() first.")
-    _LINKS_FH.write(json.dumps(record, ensure_ascii=False) + "\n")
-    _LINKS_FH.flush()
-
-
 def crawl_dataset(
     seeds_path: str | Path = SEEDS_PATH,
     pages_out_path: str | Path = PAGES_OUT_PATH,
-    links_out_path: str | Path = LINKS_OUT_PATH,
     max_pages: int = MAX_PAGES,
     max_links_per_page: int = MAX_LINKS_PER_PAGE,
 ) -> None:
@@ -434,15 +659,7 @@ def crawl_dataset(
 
     excluded_title_count = 0
     excluded_disambig_count = 0
-    self_loop_count = 0
     stats: Dict[str, int] = {}
-
-    metadata_cache: Dict[int, Dict[str, Any]] = {}
-    pending_page_ids: List[int] = []
-    written_pages: Set[int] = set()
-    pages_enriched = 0
-    missing_extracts = 0
-    missing_categories = 0
 
     if RANDOM_SEED is not None:
         random.seed(RANDOM_SEED)
@@ -473,206 +690,108 @@ def crawl_dataset(
         resolved_seeds = dict(list(resolved_seeds.items())[:max_pages])
 
     pages_path = Path(pages_out_path)
-    links_path = Path(links_out_path)
     pages_path.parent.mkdir(parents=True, exist_ok=True)
-    links_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Known pages are those included in the dataset (written or reserved),
-    # capped at max_pages. This prevents edges pointing to out-of-dataset nodes.
-    known_pages: Dict[int, str] = {}  # page_id -> title
-    title_to_id: Dict[str, int] = {}  # canonical_title -> page_id
     visited: Set[int] = set()  # crawled pages by ID
-    enqueued_titles: Set[str] = set()
-    edges_written: Set[Tuple[int, int]] = set()
-
-    # Prepopulate dataset with resolved seed pages and initialize queue using canonical titles.
-    for title, page_id in resolved_seeds.items():
-        known_pages[page_id] = title
-        title_to_id[title] = page_id
-        enqueued_titles.add(title)
-
+    enqueued_titles: Set[str] = set(resolved_seeds.keys())
     q: Deque[str] = deque(resolved_seeds.keys())
 
-    global _PAGES_FH, _LINKS_FH
+    global _PAGES_FH
     _PAGES_FH = pages_path.open("w", encoding="utf-8")
-    _LINKS_FH = links_path.open("w", encoding="utf-8")
     try:
-        def _queue_page_for_write(pid: int) -> None:
-            if pid in written_pages:
-                return
-            if pid in pending_page_ids:
-                return
-            pending_page_ids.append(pid)
-
-        def _flush_pending_pages(force: bool = False) -> None:
-            nonlocal pages_enriched, missing_extracts, missing_categories
-            while pending_page_ids and (force or len(pending_page_ids) >= 50):
-                batch = pending_page_ids[:50]
-                del pending_page_ids[:50]
-
-                # Only fetch for pages not already cached.
-                to_fetch = [pid for pid in batch if pid not in metadata_cache]
-                if to_fetch:
-                    meta = fetch_page_metadata(to_fetch)
-                    metadata_cache.update(meta)
-
-                for pid in batch:
-                    title = known_pages.get(pid, "")
-                    meta = metadata_cache.get(pid, {"extract": "", "categories": []})
-                    extract = meta.get("extract") if isinstance(meta.get("extract"), str) else ""
-                    categories = meta.get("categories") if isinstance(meta.get("categories"), list) else []
-                    write_page(
-                        {
-                            "page_id": pid,
-                            "title": title,
-                            "extract": extract,
-                            "categories": categories,
-                        }
-                    )
-                    written_pages.add(pid)
-                    pages_enriched += 1
-                    if not extract:
-                        missing_extracts += 1
-                    if not categories:
-                        missing_categories += 1
-
-        # Queue and flush resolved seed pages first (batched enrichment).
-        for page_id in known_pages.keys():
-            _queue_page_for_write(page_id)
-        _flush_pending_pages(force=True)
-
         while q and len(visited) < max_pages:
             current_title = q.popleft()
 
-            page_id, canonical_title, outgoing_titles = fetch_page_links(current_title)
+            page_id, canonical_title, extract, categories, sections, links = fetch_page_raw(current_title)
             if page_id is None or canonical_title is None:
-                # Skip missing pages.
                 continue
-
-            # Filter during page ingestion.
             if _is_excluded_title(canonical_title):
                 excluded_title_count += 1
                 continue
-
-            # Include this page in dataset if possible.
-            if page_id not in known_pages:
-                if len(known_pages) >= max_pages:
-                    # Dataset full; do not add new nodes (and thus do not crawl further).
-                    break
-                known_pages[page_id] = canonical_title
-                title_to_id[canonical_title] = page_id
-                _queue_page_for_write(page_id)
-            else:
-                title_to_id[canonical_title] = page_id
-
             if page_id in visited:
                 continue
             visited.add(page_id)
 
-            # Flush newly discovered pages periodically in batches.
-            _flush_pending_pages(force=False)
+            # Filter candidate link targets by exclusion rules before sampling.
+            filtered_links: List[Dict[str, Any]] = []
+            for l in links:
+                tt = l.get("target_title")
+                if not isinstance(tt, str) or not tt.strip():
+                    continue
+                if _is_excluded_title(tt):
+                    excluded_title_count += 1
+                    continue
+                filtered_links.append(l)
 
-            # Filter outgoing links before random sampling/truncation/queue insertion.
-            pre_filter_outgoing = len(outgoing_titles)
-            outgoing_titles = [t for t in outgoing_titles if not _is_excluded_title(t)]
-            excluded_title_count += pre_filter_outgoing - len(outgoing_titles)
-
-            original_links_count = len(outgoing_titles)
+            original_links_count = len(filtered_links)
 
             # De-alphabetize link selection before applying the per-page cap.
-            # Keep list semantics and deterministic behavior (randomization only via RNG seed).
-            links = list(outgoing_titles)
-
+            sampled_links = list(filtered_links)
             if RANDOMIZE_LINK_SAMPLING:
-                random.shuffle(links)
-
-                buckets: Dict[str, List[str]] = {}
-                for link in links:
-                    if not link:
+                random.shuffle(sampled_links)
+                buckets: Dict[str, List[Dict[str, Any]]] = {}
+                for l in sampled_links:
+                    tt = l.get("target_title")
+                    if not isinstance(tt, str) or not tt:
                         continue
-                    first_char = link[0].upper()
-                    buckets.setdefault(first_char, []).append(link)
+                    buckets.setdefault(tt[0].upper(), []).append(l)
 
-                balanced_links: List[str] = []
-                # Round-robin sampling across buckets
-                while buckets and len(balanced_links) < max_links_per_page:
-                    for char in list(buckets.keys()):
-                        if buckets[char]:
-                            balanced_links.append(buckets[char].pop(0))
-                            if len(balanced_links) >= max_links_per_page:
+                balanced: List[Dict[str, Any]] = []
+                while buckets and len(balanced) < max_links_per_page:
+                    for ch in list(buckets.keys()):
+                        if buckets[ch]:
+                            balanced.append(buckets[ch].pop(0))
+                            if len(balanced) >= max_links_per_page:
                                 break
-                        if not buckets.get(char):
-                            buckets.pop(char, None)
-
-                links = balanced_links
+                        if not buckets.get(ch):
+                            buckets.pop(ch, None)
+                sampled_links = balanced
             else:
-                links = links[:max_links_per_page]
+                sampled_links = sampled_links[:max_links_per_page]
 
             print(
-                f"[LINK SAMPLING] {canonical_title}: selected {len(links)} / "
+                f"[LINK SAMPLING] {canonical_title}: selected {len(sampled_links)} / "
                 f"{original_links_count} links"
             )
 
-            # Resolve IDs for outgoing titles in batches to reduce requests.
-            resolved: Dict[str, int] = {}
-            for chunk in _chunked(links, 50):
-                resolved.update(_fetch_page_ids(chunk, stats=stats))
+            # Write raw page snapshot (no sanitization here).
+            write_page(
+                {
+                    "page_id": page_id,
+                    "title": canonical_title,
+                    "extract": extract,
+                    "categories": categories,
+                    "sections": sections,
+                    "links": sampled_links,
+                }
+            )
 
-            # Add targets to dataset (reserve) until dataset cap is reached.
-            for target_title, target_id in resolved.items():
-                if _is_excluded_title(target_title):
-                    excluded_title_count += 1
+            # BFS enqueue next-degree expansion targets.
+            for l in sampled_links:
+                tt = l.get("target_title")
+                if not isinstance(tt, str) or not tt.strip():
                     continue
-                if target_id not in known_pages:
-                    if len(known_pages) >= max_pages:
-                        continue
-                    known_pages[target_id] = target_title
-                    title_to_id[target_title] = target_id
-                    _queue_page_for_write(target_id)
-
-                edge = (page_id, target_id)
-                if edge in edges_written:
-                    continue
-                if page_id == target_id:
-                    self_loop_count += 1
-                    continue
-                edges_written.add(edge)
-                write_link({"source_id": page_id, "target_id": target_id})
-
-                # BFS enqueue for future crawl, but only if it's in-dataset and not yet visited.
-                if target_id not in visited and target_title not in enqueued_titles:
-                    q.append(target_title)
-                    enqueued_titles.add(target_title)
+                if tt not in enqueued_titles and len(visited) + len(q) < max_pages * 5:
+                    q.append(tt)
+                    enqueued_titles.add(tt)
 
             # Progress logging
             print(
-                f"Dataset pages: {len(known_pages)} | "
+                f"Dataset pages: {len(visited)} | "
                 f"Crawled pages: {len(visited)} | "
                 f"Queue size: {len(q)} | "
-                f"Edges written: {len(edges_written)}"
+                f"Pages written: {len(visited)}"
             )
-
-        # Flush any remaining page records.
-        _flush_pending_pages(force=True)
 
         excluded_title_count += stats.get("excluded_title_count", 0)
         excluded_disambig_count += stats.get("excluded_disambig_count", 0)
         print("=== Crawl Hygiene Summary ===")
         print(f"Excluded titles: {excluded_title_count}")
         print(f"Excluded disambiguation pages: {excluded_disambig_count}")
-        print(f"Removed self-loops: {self_loop_count}")
-
-        print("=== Metadata Summary ===")
-        print(f"[metadata] Pages enriched: {pages_enriched}")
-        print(f"[metadata] Missing extracts: {missing_extracts}")
-        print(f"[metadata] Missing categories: {missing_categories}")
     finally:
         if _PAGES_FH is not None:
             _PAGES_FH.close()
-        if _LINKS_FH is not None:
-            _LINKS_FH.close()
         _PAGES_FH = None
-        _LINKS_FH = None
 
 
 if __name__ == "__main__":

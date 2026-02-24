@@ -6,14 +6,13 @@ Using transformer models to perform graph-based retrieval augmented generation (
 
 Goal: build a small normalized Wikipedia hyperlink graph (≈500 pages) via controlled BFS expansion using the MediaWiki API (articles only, outgoing links only).
 
-New files:
-- `data-loading/dataset_loader.py`: crawls Wikipedia and writes normalized JSONL outputs.
-- `data-loading/seeds/seed_pages.json`: seed article titles to start the BFS crawl.
-- `data/pages.jsonl`: page records (`{"page_id": int, "title": str}`).
-- `data/links.jsonl`: directed link records (`{"source_id": int, "target_id": int}`).
+Pipeline:
+- `data-loading/dataset_loader.py` → `data/pages_raw.jsonl`
+- `data-loading/migrate_pages.py` → `data/pages_sanitized.jsonl`
+- `data-loading/build_link_layer.py` → `data/links_table.jsonl` + `data/link_layer_report.json`
 
 Seed setup:
-- Edit `data-loading/seeds/seed_pages.json` as a JSON array of Wikipedia article titles, for example:
+- Edit `data-loading/seeds/basic_seeds.json` as a JSON array of Wikipedia article titles, for example:
 
 ```json
 ["Artificial intelligence", "Machine learning", "Graph theory"]
@@ -26,15 +25,22 @@ python3 data-loading/dataset_loader.py
 ```
 
 This will create/overwrite:
-- `data/pages.jsonl`
-- `data/links.jsonl`
+- `data/pages_raw.jsonl`
 
 Post-crawl sanitization (Phase 1):
-- Reads: `data/pages.jsonl`, `data/links.jsonl`
-- Writes: `data/pages_sanitized.jsonl` (adds cleaned extracts/categories + link metadata; safe to run without re-crawling)
+- Reads: `data/pages_raw.jsonl`
+- Writes: `data/pages_sanitized.jsonl` (sanitized text + category cleanup + `outgoing_links` objects)
 
 ```bash
 python3 data-loading/migrate_pages.py
+```
+
+Build links table:
+- Reads: `data/pages_sanitized.jsonl`
+- Writes: `data/links_table.jsonl`, `data/link_layer_report.json`
+
+```bash
+python3 data-loading/build_link_layer.py
 ```
 
 

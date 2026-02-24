@@ -2,8 +2,7 @@
 Migration script: sanitize and enrich page records post-crawl.
 
 Reads:
-  - data/pages.jsonl
-  - data/links.jsonl
+  - data/pages_raw.jsonl
 
 Writes:
   - data/pages_sanitized.jsonl
@@ -24,8 +23,7 @@ from typing import Any, DefaultDict, Dict, Iterable, Iterator, List, Set
 
 import requests
 
-PAGES_IN_PATH = Path("data/pages.jsonl")
-LINKS_IN_PATH = Path("data/links.jsonl")
+PAGES_IN_PATH = Path("data/pages_raw.jsonl")
 PAGES_OUT_PATH = Path("data/pages_sanitized.jsonl")
 
 WIKI_REST_SUMMARY = "https://en.wikipedia.org/api/rest_v1/page/summary/"
@@ -165,7 +163,8 @@ def sanitize_page_record(page_dict: Dict[str, Any]) -> Dict[str, Any]:
     except (TypeError, ValueError):
         return {}
 
-    extract_raw = page_dict.get("extract") if isinstance(page_dict.get("extract"), str) else ""
+    extract_raw_val = page_dict.get("extract")
+    extract_raw = extract_raw_val if isinstance(extract_raw_val, str) else ""
     extract = extract_raw.strip()
 
     # Extract completion
@@ -190,16 +189,32 @@ def sanitize_page_record(page_dict: Dict[str, Any]) -> Dict[str, Any]:
     categories_clean = [c for c in categories_raw if c.strip() and not _category_is_noise(c)]
     category_tokens = _tokenize_categories(categories_clean)
 
-    # Links
-    outgoing = page_dict.get("outgoing_links")
-    if not isinstance(outgoing, list):
-        outgoing = []
-    outgoing_links: List[int] = []
-    for x in outgoing:
-        try:
-            outgoing_links.append(int(x))
-        except (TypeError, ValueError):
+    # Links: migrate raw semantic links into outgoing_links objects.
+    raw_links = page_dict.get("links")
+    if not isinstance(raw_links, list):
+        raw_links = []
+
+    outgoing_links: List[Dict[str, Any]] = []
+    for item in raw_links:
+        if not isinstance(item, dict):
             continue
+        tt = item.get("target_title")
+        anch = item.get("anchor")
+        sec = item.get("section")
+        if not isinstance(tt, str) or not tt.strip():
+            continue
+        target_title = tt.strip()
+        anchor = anch.strip() if isinstance(anch, str) and anch.strip() else target_title
+        section = sec.strip() if isinstance(sec, str) and sec.strip() else None
+
+        outgoing_links.append(
+            {
+                "target_title": target_title,
+                "anchor_clean": _clean_extract_for_training(anchor),
+                "section_clean": _clean_extract_for_training(section) if section else None,
+            }
+        )
+
     link_count = len(outgoing_links)
 
     is_stub = extract_length < 40
@@ -223,18 +238,6 @@ def sanitize_page_record(page_dict: Dict[str, Any]) -> Dict[str, Any]:
 def main() -> None:
     if not PAGES_IN_PATH.exists():
         raise FileNotFoundError(f"Missing input pages file: {PAGES_IN_PATH}")
-    if not LINKS_IN_PATH.exists():
-        raise FileNotFoundError(f"Missing input links file: {LINKS_IN_PATH}")
-
-    # Build outgoing link lists per source_id (no dedup here by design).
-    outgoing_map: DefaultDict[int, List[int]] = defaultdict(list)
-    for rec in _iter_jsonl(LINKS_IN_PATH):
-        try:
-            sid = int(rec.get("source_id"))
-            tid = int(rec.get("target_id"))
-        except (TypeError, ValueError):
-            continue
-        outgoing_map[sid].append(tid)
 
     total = 0
     has_extract_count = 0
@@ -252,7 +255,6 @@ def main() -> None:
                 continue
 
             rec = dict(rec)
-            rec["outgoing_links"] = outgoing_map.get(page_id, [])
 
             enriched = sanitize_page_record(rec)
             if not enriched:
