@@ -6,8 +6,10 @@ pycache/
 .env
 .DS_Store
 data/*.jsonl
+data/*.json
 data/.jsonl
 data/**/*.jsonl
+data/**/*.json
 data/**/*.pt
 diff.txt
 
