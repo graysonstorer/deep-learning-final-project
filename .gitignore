@@ -5,5 +5,9 @@ pycache/
 *.pyd
 .env
 .DS_Store
+data/*.jsonl
+data/.jsonl
+data/**/*.jsonl
+data/**/*.pt
 diff.txt
 
