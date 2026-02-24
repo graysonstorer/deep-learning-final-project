@@ -43,7 +43,7 @@ DATA_LOADING_DIR = Path(__file__).resolve().parent
 REPO_ROOT = DATA_LOADING_DIR.parent
 
 SEEDS_PATH = DATA_LOADING_DIR / "seeds" / "basic_seeds.json"
-PAGES_OUT_PATH = REPO_ROOT / "data" / "pages_raw.jsonl"
+PAGES_OUT_PATH = REPO_ROOT / "data" / "raw" / "pages_raw.jsonl"
 
 # Module-level file handles used by write_* functions (opened in crawl_dataset).
 _PAGES_FH: Optional[Any] = None

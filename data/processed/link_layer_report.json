@@ -1,0 +1,16 @@
+{
+  "pages_path": "/Users/szimpfer/Documents/_UVM/Deep learning/Final Project/deep-learning-final-project/data/processed/pages_sanitized.jsonl",
+  "pages_count": 500,
+  "edges_emitted_raw": 1278,
+  "links_rows_deduped": 1256,
+  "skipped_missing_target": 21566,
+  "skipped_self_loops": 1,
+  "skipped_unparseable": 0,
+  "sum_reported_link_count": 22844,
+  "orphan_edges_detected": 0,
+  "self_loops_detected": 0,
+  "outputs": {
+    "links_table_jsonl": "/Users/szimpfer/Documents/_UVM/Deep learning/Final Project/deep-learning-final-project/data/processed/links_table.jsonl",
+    "report_json": "/Users/szimpfer/Documents/_UVM/Deep learning/Final Project/deep-learning-final-project/data/processed/link_layer_report.json"
+  }
+}

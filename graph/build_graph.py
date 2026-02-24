@@ -13,9 +13,12 @@ from typing import Any, Dict, Iterable, Iterator, Tuple
 
 import networkx as nx
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
+
 # Configurable default paths (canonical pipeline)
-PAGES_PATH = Path("../data/pages_sanitized.jsonl")
-LINKS_PATH = Path("../data/links_table.jsonl")
+PAGES_PATH = DATA_PROCESSED_DIR / "pages_sanitized.jsonl"
+LINKS_PATH = DATA_PROCESSED_DIR / "links_table.jsonl"
 
 
 def _iter_json_records(path: Path) -> Iterator[Dict[str, Any]]:
@@ -97,8 +100,8 @@ def build_graph(
       (G, id_to_title)
     """
     # Support running from repo root (fallbacks relative to root).
-    pages_path = _default_fallback(pages_path, Path("data/pages_sanitized.jsonl"))
-    links_path = _default_fallback(links_path, Path("data/links_table.jsonl"))
+    pages_path = _default_fallback(pages_path, PROJECT_ROOT / "data" / "processed" / "pages_sanitized.jsonl")
+    links_path = _default_fallback(links_path, PROJECT_ROOT / "data" / "processed" / "links_table.jsonl")
 
     id_to_title: Dict[int, str] = {}
     title_to_id: Dict[str, int] = {}

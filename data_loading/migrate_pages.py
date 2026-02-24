@@ -17,14 +17,17 @@ import json
 import re
 import string
 import time
-from collections import defaultdict
 from pathlib import Path
-from typing import Any, DefaultDict, Dict, Iterable, Iterator, List, Set
+from typing import Any, Dict, Iterable, Iterator, List, Set
 
 import requests
 
-PAGES_IN_PATH = Path("data/pages_raw.jsonl")
-PAGES_OUT_PATH = Path("data/pages_sanitized.jsonl")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_RAW_DIR = PROJECT_ROOT / "data" / "raw"
+DATA_PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
+
+PAGES_IN_PATH = DATA_RAW_DIR / "pages_raw.jsonl"
+PAGES_OUT_PATH = DATA_PROCESSED_DIR / "pages_sanitized.jsonl"
 
 WIKI_REST_SUMMARY = "https://en.wikipedia.org/api/rest_v1/page/summary/"
 HEADERS = {"User-Agent": "WikiGraphCrawler/0.1 (academic project)"}

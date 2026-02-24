@@ -22,11 +22,13 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple
 import pandas as pd
 
 
-DATA_DIR = Path("data")
-PAGES_SANITIZED = DATA_DIR / "pages_sanitized.jsonl"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 
-LINKS_OUT_PATH = DATA_DIR / "links_table.jsonl"
-REPORT_OUT_PATH = DATA_DIR / "link_layer_report.json"
+PAGES_SANITIZED = DATA_PROCESSED_DIR / "pages_sanitized.jsonl"
+
+LINKS_OUT_PATH = DATA_PROCESSED_DIR / "links_table.jsonl"
+REPORT_OUT_PATH = DATA_PROCESSED_DIR / "link_layer_report.json"
 
 
 _CITATION_RE = re.compile(r"\[\d+\]")
@@ -135,7 +137,7 @@ def build_link_layer(
     if not pages_path.exists():
         raise FileNotFoundError(f"Pages dataset not found: {pages_path}")
 
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    DATA_PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
     # Step 1: title -> page_id lookup map
     title_to_id: Dict[str, int] = {}
