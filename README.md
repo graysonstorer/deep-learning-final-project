@@ -1,16 +1,34 @@
 # CS6540 Deep Learning Final Project
 
-Using transformer models to perform graph-based retrieval augmented generation (GraphRAG) tasks on data from Wikipedia. 
+Using transformer models to perform graph-based retrieval augmented generation (GraphRAG) tasks on data from Wikipedia.
 
-### Dataset acquisition (Wikipedia graph prototype)
+## Repository Structure
 
-Goal: build a small normalized Wikipedia hyperlink graph (≈500 pages) via controlled BFS expansion using the MediaWiki API (articles only, outgoing links only).
+- **`data_loading/`**: Wikipedia crawling, migration, and sanitization logic. Produces structured page records suitable for downstream processing.
+- **`embeddings/`**: Generates semantic vector representations for each Wikipedia page using textual and categorical information.
+- **`graph/`**: Constructs the final semantic page graph used for downstream machine learning tasks.
+- **`graph/diagnostics/`**: Optional analysis and validation utilities for inspecting graph connectivity and quality.
+- **`data/`**: Stores generated datasets including sanitized pages, embeddings, and graph artifacts.
+- **`tests/`**: Validation scripts confirming correctness of embeddings and graph outputs.
 
-Pipeline:
-- `data_loading/dataset_loader.py` → `data/raw/pages_raw.jsonl`
-- `data_loading/migrate_pages.py` → `data/processed/pages_sanitized.jsonl`
-- `data_loading/build_link_layer.py` → `data/processed/links_table.jsonl` + `data/processed/link_layer_report.json`
-- `embeddings/generate_embeddings.py` → `data/embeddings/page_embeddings.pt`
+This repository intentionally separates: **data ingestion → representation → graph construction → validation**.
+
+## Dataset Construction Pipeline
+
+The objective is to construct a **training-ready knowledge graph dataset** prior to model training. The Wikipedia crawler builds a small normalized graph (≈500 pages) via controlled BFS expansion using the MediaWiki API (articles only, outgoing links only).
+
+Execution order:
+
+1. Crawl and sanitize Wikipedia pages
+   - `data_loading/dataset_loader.py` → `data/raw/pages_raw.jsonl`
+   - `data_loading/migrate_pages.py` → `data/processed/pages_sanitized.jsonl`
+   - `data_loading/build_link_layer.py` → `data/processed/links_table.jsonl` + `data/processed/link_layer_report.json`
+
+2. Generate semantic page embeddings
+   - `embeddings/generate_embeddings.py` → `data/embeddings/page_embeddings.pt`
+
+3. Construct semantic similarity graph
+   - `graph/build_page_graph.py` → `data/processed/page_graph.gpickle`
 
 Seed setup:
 - Edit `data_loading/seeds/basic_seeds.json` as a JSON array of Wikipedia article titles, for example:
@@ -19,72 +37,78 @@ Seed setup:
 ["Artificial intelligence", "Machine learning", "Graph theory"]
 ```
 
-Run (from repo root):
+Run (from repo root, in order):
 
 ```bash
 python3 data_loading/dataset_loader.py
-```
-
-This will create/overwrite:
-- `data/raw/pages_raw.jsonl`
-
-Post-crawl sanitization (Phase 1):
-- Reads: `data/raw/pages_raw.jsonl`
-- Writes: `data/processed/pages_sanitized.jsonl` (sanitized text + category cleanup + `outgoing_links` objects)
-
-```bash
 python3 data_loading/migrate_pages.py
-```
-
-Build links table:
-- Reads: `data/processed/pages_sanitized.jsonl`
-- Writes: `data/processed/links_table.jsonl`, `data/processed/link_layer_report.json`
-
-```bash
 python3 data_loading/build_link_layer.py
+python3 embeddings/generate_embeddings.py
+python3 graph/build_page_graph.py
 ```
 
-Generate embeddings:
-- Reads: `data/processed/pages_sanitized.jsonl`
-- Writes: `data/embeddings/page_embeddings.pt`
+Optional diagnostics (connectivity/quality checks):
 
 ```bash
-python3 embeddings/generate_embeddings.py
+python3 -m graph.diagnostics.run_diagnostics
 ```
 
-## Text Embedding Strategy
+## Semantic Page Embeddings
 
-This project treats each Wikipedia page as a **concept node** in a hyperlink graph, so we require a **single fixed-length vector** per page that captures *document-level semantic meaning*.
+Each Wikipedia page is transformed into a single dense vector representation. A unified document is constructed from:
 
-- **Motivation**: word-level embeddings (e.g., Word2Vec/GloVe) are not sufficient for node features because they do not represent the meaning of an entire passage directly, and simple aggregation (mean/sum pooling over word vectors) tends to lose context and compositional semantics that matter for concept similarity.
+- page title
+- cleaned summary extract
+- cleaned category labels
 
-- **Model choice**: we use the Sentence Transformer model `sentence-transformers/all-MiniLM-L6-v2`.
-  - It is a **transformer encoder** that produces dense embeddings for a full text span (sentence/paragraph/document excerpt).
-  - It is trained with **contrastive objectives** for semantic similarity (bringing related texts closer and pushing unrelated texts apart), so **similar concepts cluster in vector space**.
+These components are concatenated and encoded into one embedding vector using `sentence-transformers/all-MiniLM-L6-v2`.
 
-- **Advantages for this project**:
-  - Produces **one embedding per Wikipedia page** (natural node representation).
-  - Captures **contextual semantics** from the page extract + category cues.
-  - Enables **cosine similarity** comparisons between concepts (useful for retrieval and navigation scoring).
-  - Works well as **node features for GNNs**, complementing hyperlink structure.
-  - **Computationally efficient** (small model; feasible on laptop/Colab).
-  - Common **academic baseline** for semantic representation learning.
-  - **Fully reproducible** (local inference; no external embedding API dependency).
+Rationale:
 
-- **Role in the overall pipeline**:
+- Produces sentence-level semantic embeddings rather than isolated word vectors.
+- Captures contextual meaning across entire documents.
+- Computationally efficient (384-dimensional vectors).
+- Widely adopted baseline model in NLP and retrieval systems.
+- Suitable for similarity search, clustering, and graph construction.
+- Runs efficiently on local machines or Google Colab.
 
-Wikipedia text → Sentence Transformer embeddings → Graph construction (Wikipedia links) → Graph neural network training
+Output:
 
-Embeddings provide **semantic information**, while hyperlinks provide **structural information**.
+- Each `page_id` maps to a normalized 384-dimensional embedding stored in `data/embeddings/page_embeddings.pt`.
+- Embeddings enable quantitative semantic comparison between pages via cosine similarity.
 
-- **Design rationale (offline embeddings)**: embeddings are generated during dataset construction (offline) rather than learned jointly with the graph model to:
-  - reduce computational cost,
-  - stabilize GNN training,
-  - enable rapid experimentation by swapping graph models while keeping node features fixed.
+## Semantic Page Graph
+
+The graph represents semantic relationships between Wikipedia pages:
+
+- Nodes correspond to individual pages.
+- Edges connect pages with high embedding similarity.
+- Edge weights are derived from cosine similarity between embeddings.
+
+Graph connectivity is based on semantic similarity rather than raw hyperlink structure, which matters because it:
+
+- captures latent conceptual relationships,
+- enables graph neural network training,
+- supports node classification and link prediction tasks,
+- provides structure suitable for modern graph-based deep learning models.
+
+Canonical builder: `graph/build_page_graph.py`  
+Diagnostics tools: `graph/diagnostics/`
+
+## Design Philosophy
+
+This repository focuses on dataset engineering for graph-based machine learning. The pipeline intentionally separates:
+
+- data collection
+- feature construction
+- semantic representation
+- relational structure generation
+
+Model training is decoupled so that multiple learning approaches can reuse the same dataset.
 
 
 ### References: 
 
-https://arxiv.org/pdf/2602.02053#cite.edge2025localglobalgraphrag
+`https://arxiv.org/pdf/2602.02053#cite.edge2025localglobalgraphrag`
 
 Dataset: [![Dataset](https://img.shields.io/badge/🤗%20Dataset-WildGraphBench-yellow)](https://huggingface.co/datasets/YOUR_HF_LINK_HERE)

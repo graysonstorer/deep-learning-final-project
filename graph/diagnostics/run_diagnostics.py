@@ -4,15 +4,10 @@ from __future__ import annotations
 
 
 def main() -> None:
-    # Support running as a script (from graph/) or as a module (python -m graph.run_diagnostics).
-    try:
-        from build_graph import build_graph  # type: ignore
-        import diagnostics as diag  # type: ignore
-    except ImportError:  # pragma: no cover
-        from .build_graph import build_graph
-        from . import diagnostics as diag
+    from graph.build_page_graph import build_page_graph
+    from graph.diagnostics import metrics as diag
 
-    G, id_to_title = build_graph()
+    G, id_to_title = build_page_graph()
 
     print("\nGRAPH SUMMARY")
     print("Nodes:", G.number_of_nodes())
