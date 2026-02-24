@@ -14,10 +14,17 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
 
 import torch
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from utils.dataset_metadata import build_dataset_metadata, save_dataset_metadata
 
 
 def _project_root() -> Path:
@@ -226,6 +233,24 @@ def main() -> None:
         avg_text_length_words=avg_len,
     )
     print(f"[save] wrote: {out_path}")
+
+    # Dataset metadata (reproducibility)
+    emb_dim = int(embeddings.shape[1]) if embeddings.ndim == 2 else None
+    crawl_limit = int(args.max_pages) if args.max_pages is not None else len(pages)
+    metadata = build_dataset_metadata(
+        num_pages=len(page_ids),
+        embedding_model_name=args.model_name,
+        embedding_dimension=emb_dim,
+        similarity_metric="cosine",
+        similarity_threshold=None,
+        graph_type=None,
+        num_nodes=None,
+        num_edges=None,
+        crawl_limit=crawl_limit,
+        avg_text_length_words=float(avg_len),
+    )
+    meta_path = save_dataset_metadata(metadata, output_path=(root / "data" / "metadata" / "dataset_metadata.json"))
+    print(f"[metadata] wrote: {meta_path}")
 
 
 if __name__ == "__main__":

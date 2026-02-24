@@ -24,14 +24,19 @@ import argparse
 import json
 import pickle
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 import networkx as nx
 import torch
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from utils.dataset_metadata import build_dataset_metadata, load_dataset_metadata, save_dataset_metadata  # noqa: E402
+
 DATA_DIR = PROJECT_ROOT / "data"
 PROCESSED_DIR = DATA_DIR / "processed"
 EMBED_DIR = DATA_DIR / "embeddings"
@@ -103,6 +108,7 @@ def _build_page_graph_from_loaded(
     links_path: Path,
     top_k: int,
     add_semantic: bool,
+    similarity_threshold: Optional[float],
 ) -> Tuple[nx.DiGraph, Dict[int, str]]:
     """
     Build directed graph with nodes from pages, structural edges from links_table,
@@ -171,6 +177,8 @@ def _build_page_graph_from_loaded(
         for v, j in zip(vals.tolist(), idxs.tolist()):
             tgt_pid = usable_page_ids[j]
             weight = float(v)
+            if similarity_threshold is not None and weight < float(similarity_threshold):
+                continue
             if G.has_edge(src_pid, tgt_pid):
                 # Preserve structural edge and add semantic contribution to weight.
                 G[src_pid][tgt_pid]["weight"] = float(G[src_pid][tgt_pid].get("weight", 0.0)) + weight
@@ -206,6 +214,7 @@ def build_page_graph(
     embeddings_path: Optional[Path] = None,
     out_path: Optional[Path] = None,
     top_k: int = 5,
+    similarity_threshold: Optional[float] = None,
     add_semantic: bool = True,
     save: bool = True,
 ) -> Tuple[nx.DiGraph, Dict[int, str]]:
@@ -228,6 +237,12 @@ def build_page_graph(
         parser.add_argument("--links", type=str, default=str(DEFAULT_LINKS_PATH))
         parser.add_argument("--out", type=str, default=str(DEFAULT_OUT_PATH))
         parser.add_argument("--top_k", type=int, default=top_k)
+        parser.add_argument(
+            "--similarity_threshold",
+            type=float,
+            default=similarity_threshold,
+            help="Optional minimum cosine similarity to keep a semantic edge",
+        )
         parser.add_argument("--no_semantic", action="store_true", help="Disable semantic similarity edges")
         args = parser.parse_args()
 
@@ -236,6 +251,7 @@ def build_page_graph(
         embeddings_path = Path(args.embeddings)
         out_path = Path(args.out)
         top_k = int(args.top_k)
+        similarity_threshold = args.similarity_threshold
         add_semantic = not args.no_semantic
 
     pages_path = pages_path or DEFAULT_PAGES_PATH
@@ -255,10 +271,61 @@ def build_page_graph(
         links_path=links_path,
         top_k=top_k,
         add_semantic=add_semantic,
+        similarity_threshold=similarity_threshold,
     )
 
     if save:
         save_graph(G, out_path)
+
+    # Dataset metadata (reproducibility): update graph fields without erasing prior info.
+    meta_path = PROJECT_ROOT / "data" / "metadata" / "dataset_metadata.json"
+    existing = load_dataset_metadata(meta_path)
+    created_at = datetime.now(timezone.utc).isoformat()
+
+    if existing is None:
+        emb_model = None
+        emb_dim = None
+        avg_len = None
+        if embeddings_obj is not None:
+            emb_model = embeddings_obj.get("model_name") if isinstance(embeddings_obj.get("model_name"), str) else None
+            emb_t = embeddings_obj.get("embeddings")
+            if torch.is_tensor(emb_t) and emb_t.ndim == 2:
+                emb_dim = int(emb_t.shape[1])
+            try:
+                avg_len = float(embeddings_obj.get("avg_text_length_words"))
+            except Exception:
+                avg_len = None
+
+        existing = build_dataset_metadata(
+            num_pages=len(pages),
+            embedding_model_name=emb_model,
+            embedding_dimension=emb_dim,
+            similarity_metric="cosine",
+            similarity_threshold=similarity_threshold,
+            graph_type="semantic_similarity",
+            num_nodes=G.number_of_nodes(),
+            num_edges=G.number_of_edges(),
+            crawl_limit=len(pages),
+            avg_text_length_words=avg_len,
+            additional_notes="Metadata created during graph construction (embedding stage metadata missing).",
+        )
+    else:
+        # Update timestamp to reflect the latest rebuild.
+        if isinstance(existing.get("dataset_info"), dict):
+            existing["dataset_info"]["created_at"] = created_at
+        else:
+            existing["dataset_info"] = {"created_at": created_at, "dataset_version": "auto"}
+
+        existing["graph"] = {
+            "type": "semantic_similarity",
+            "similarity_metric": "cosine",
+            "similarity_threshold": similarity_threshold,
+            "num_nodes": G.number_of_nodes(),
+            "num_edges": G.number_of_edges(),
+        }
+
+    save_dataset_metadata(existing, output_path=meta_path)
+    print(f"[metadata] updated: {meta_path}")
 
     return G, id_to_title
 
