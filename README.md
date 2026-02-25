@@ -37,14 +37,38 @@ Seed setup:
 ["Artificial intelligence", "Machine learning", "Graph theory"]
 ```
 
-Run (from repo root, in order):
+### Full pipeline runner (recommended)
+
+This repository provides a single orchestration command that runs the full pipeline end-to-end **without reimplementing stage logic**. It calls the existing scripts in order, stops on failure, regenerates metadata, verifies training readiness, and then creates a Hugging Face–ready export bundle.
+
+Run (from repo root):
 
 ```bash
-python3 data_loading/dataset_loader.py
+python3 scripts/run_pipeline.py --pages 500 --max_links_per_page 50 --version v1_500_pages
+```
+
+This will produce:
+- **Canonical artifacts** under `data/` (raw pages, sanitized pages, embeddings, graph, metadata)
+- **An export bundle** under `exports/v1_500_pages/` (ready for upload)
+
+Useful flags:
+- `--dry-run`: print commands without executing
+- `--max_links_per_page`: cap outgoing links stored per page (controls crawl graph density; default: 50)
+- `--skip-crawl`, `--skip-embeddings`, `--skip-graph`, `--skip-verify`, `--skip-package`: resume partial runs
+- If `--version` is omitted, an automatic version is generated like `YYYYMMDD_HHMMSS_pagesXXXX`
+
+### Manual execution (advanced)
+
+If you want to run stages individually (debugging or experimentation), execute the same scripts the runner orchestrates:
+
+```bash
+python3 data_loading/dataset_loader.py --max_pages 500 --max_links_per_page 50
 python3 data_loading/migrate_pages.py
 python3 data_loading/build_link_layer.py
-python3 embeddings/generate_embeddings.py
+python3 embeddings/generate_embeddings.py --max_pages 500
 python3 graph/build_page_graph.py
+python3 tests/verify_dataset.py
+python3 scripts/package_dataset.py --version v1_500_pages
 ```
 
 Optional diagnostics (connectivity/quality checks):

@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pickle
 import sys
 from datetime import datetime, timezone
@@ -323,6 +324,19 @@ def build_page_graph(
             "num_nodes": G.number_of_nodes(),
             "num_edges": G.number_of_edges(),
         }
+
+    # Optional pipeline-provided crawl density parameter.
+    # Only set it when provided so old metadata files remain valid.
+    env_mlp = os.environ.get("PIPELINE_MAX_LINKS_PER_PAGE")
+    if env_mlp is not None and str(env_mlp).strip():
+        try:
+            mlp_int = int(str(env_mlp).strip())
+        except Exception:
+            mlp_int = None
+        if mlp_int is not None and mlp_int > 0:
+            if not isinstance(existing.get("crawl"), dict):
+                existing["crawl"] = {}
+            existing["crawl"]["max_links_per_page"] = mlp_int
 
     save_dataset_metadata(existing, output_path=meta_path)
     print(f"[metadata] updated: {meta_path}")

@@ -10,6 +10,7 @@ Outputs (JSONL):
 
 from __future__ import annotations
 
+import argparse
 import json
 import random
 import re
@@ -795,5 +796,22 @@ def crawl_dataset(
 
 
 if __name__ == "__main__":
-    crawl_dataset()
+    parser = argparse.ArgumentParser(description="Crawl Wikipedia and write raw pages JSONL.")
+    parser.add_argument("--seeds_path", type=str, default=str(SEEDS_PATH), help="Path to seed titles JSON")
+    parser.add_argument("--out_path", type=str, default=str(PAGES_OUT_PATH), help="Output pages_raw.jsonl path")
+    parser.add_argument("--max_pages", type=int, default=MAX_PAGES, help="Maximum unique pages to crawl")
+    parser.add_argument(
+        "--max_links_per_page",
+        type=int,
+        default=MAX_LINKS_PER_PAGE,
+        help="Maximum outgoing links stored per page",
+    )
+    args = parser.parse_args()
+
+    crawl_dataset(
+        seeds_path=args.seeds_path,
+        pages_out_path=args.out_path,
+        max_pages=int(args.max_pages),
+        max_links_per_page=int(args.max_links_per_page),
+    )
 

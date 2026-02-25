@@ -54,6 +54,18 @@ def main() -> None:
     print("DATASET PACKAGING (HF-READY EXPORT)")
     print("=======================")
 
+    # Optional: allow an explicit export folder name for reproducible pipeline runs.
+    requested_version = None
+    if "--version" in sys.argv:
+        i = sys.argv.index("--version")
+        if i + 1 >= len(sys.argv):
+            print("ERROR: --version requires a value, e.g. --version v2_5000_pages")
+            sys.exit(1)
+        requested_version = str(sys.argv[i + 1]).strip()
+        if not requested_version:
+            print("ERROR: --version value is empty")
+            sys.exit(1)
+
     pages_sanitized = PROCESSED_DIR / "pages_sanitized.jsonl"
     graph = PROCESSED_DIR / "page_graph.gpickle"
     embeddings = EMBEDDINGS_DIR / "page_embeddings.pt"
@@ -96,32 +108,39 @@ def main() -> None:
     EXPORT_ROOT = REPO_ROOT / "exports"
     EXPORT_ROOT.mkdir(exist_ok=True)
 
-    # Determine next version by scanning existing exports like: v<number>_<num_pages>_pages
-    max_version = 0
-    for p in EXPORT_ROOT.iterdir():
-        if not p.is_dir():
-            continue
-        name = p.name
-        if not name.startswith("v"):
-            continue
-        # Parse leading integer after "v"
-        i = 1
-        while i < len(name) and name[i].isdigit():
-            i += 1
-        if i == 1:
-            continue
-        try:
-            ver = int(name[1:i])
-        except Exception:
-            continue
-        if ver > max_version:
-            max_version = ver
+    if requested_version is not None:
+        dataset_name = requested_version
+    else:
+        # Determine next version by scanning existing exports like: v<number>_<num_pages>_pages
+        max_version = 0
+        for p in EXPORT_ROOT.iterdir():
+            if not p.is_dir():
+                continue
+            name = p.name
+            if not name.startswith("v"):
+                continue
+            # Parse leading integer after "v"
+            i = 1
+            while i < len(name) and name[i].isdigit():
+                i += 1
+            if i == 1:
+                continue
+            try:
+                ver = int(name[1:i])
+            except Exception:
+                continue
+            if ver > max_version:
+                max_version = ver
 
-    next_version = max_version + 1
-    dataset_name = f"v{next_version}_{num_pages}_pages"
+        next_version = max_version + 1
+        dataset_name = f"v{next_version}_{num_pages}_pages"
 
     export_dir = EXPORT_ROOT / dataset_name
     if export_dir.exists():
+        if requested_version is not None:
+            print(f"ERROR: export directory already exists: {export_dir}")
+            print("Refusing to overwrite. Choose a new --version.")
+            sys.exit(1)
         export_dir = EXPORT_ROOT / f"{dataset_name}-{timestamp}"
     export_dir.mkdir(parents=True, exist_ok=False)
 
