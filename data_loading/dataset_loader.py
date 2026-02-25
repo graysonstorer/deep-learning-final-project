@@ -20,6 +20,8 @@ from pathlib import Path
 from typing import Any, Deque, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 API_ENDPOINT = "https://en.wikipedia.org/w/api.php"
 
@@ -38,6 +40,36 @@ RANDOM_SEED = 42  # Set to None for full stochasticity
 
 # Polite delay between HTTP requests (seconds)
 REQUEST_DELAY_S = 0.1
+
+# Shared HTTP session (initialized per crawl in crawl_dataset).
+_HTTP_SESSION: Optional[requests.Session] = None
+
+
+def create_http_session() -> requests.Session:
+    retry_strategy = Retry(
+        total=5,
+        backoff_factor=0.5,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET"],
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(
+        max_retries=retry_strategy,
+        pool_connections=100,
+        pool_maxsize=100,
+    )
+
+    session = requests.Session()
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+
+    session.headers.update(
+        {
+            "User-Agent": "WikipediaDatasetCrawler/1.0 (research dataset construction)",
+        }
+    )
+
+    return session
 
 # Default paths (resolve relative to this file so execution from repo root works)
 DATA_LOADING_DIR = Path(__file__).resolve().parent
@@ -71,9 +103,31 @@ def load_seeds(path: str | Path) -> List[str]:
 
 def _api_get(params: Dict[str, Any]) -> Dict[str, Any]:
     """Perform a MediaWiki API GET request with basic error handling and rate limiting."""
-    resp = requests.get(API_ENDPOINT, params=params, headers=HEADERS, timeout=30)
-    resp.raise_for_status()
-    time.sleep(REQUEST_DELAY_S)
+    title = params.get("titles") or params.get("title") or ""
+    page_title = str(title)[:200] if title is not None else ""
+
+    session = _HTTP_SESSION
+    try:
+        if session is None:
+            resp = requests.get(API_ENDPOINT, params=params, headers=HEADERS, timeout=30)
+        else:
+            resp = session.get(API_ENDPOINT, params=params, timeout=(5, 30))
+        resp.raise_for_status()
+    except requests.exceptions.ConnectTimeout:
+        print(f"[raw] CONNECT TIMEOUT: {page_title}")
+        return {}
+    except requests.exceptions.ReadTimeout:
+        print(f"[raw] READ TIMEOUT: {page_title}")
+        return {}
+    except requests.exceptions.ConnectionError as e:
+        print(f"[raw] CONNECTION ERROR: {page_title} ({e})")
+        return {}
+    except requests.exceptions.HTTPError as e:
+        print(f"[raw] HTTP ERROR: {page_title} ({e})")
+        return {}
+
+    # Lightweight polite throttling (post-success).
+    time.sleep(0.02)
     return resp.json()
 
 
@@ -699,7 +753,14 @@ def crawl_dataset(
 
     global _PAGES_FH
     _PAGES_FH = pages_path.open("w", encoding="utf-8")
+    session: Optional[requests.Session] = None
+    global _HTTP_SESSION
+    pages_written = 0
     try:
+        # Initialize a shared HTTP session once per crawl.
+        session = create_http_session()
+        _HTTP_SESSION = session
+
         while q and len(visited) < max_pages:
             current_title = q.popleft()
 
@@ -783,16 +844,32 @@ def crawl_dataset(
                 f"Queue size: {len(q)} | "
                 f"Pages written: {len(visited)}"
             )
+            if len(q) > max_pages * 20:
+                print(
+                    f"[WARN] Queue unusually large: {len(q)} "
+                    f"(possible high-degree frontier expansion)"
+                )
 
         excluded_title_count += stats.get("excluded_title_count", 0)
         excluded_disambig_count += stats.get("excluded_disambig_count", 0)
         print("=== Crawl Hygiene Summary ===")
         print(f"Excluded titles: {excluded_title_count}")
         print(f"Excluded disambiguation pages: {excluded_disambig_count}")
+        pages_written = len(visited)
     finally:
+        if session is not None:
+            try:
+                session.close()
+            finally:
+                _HTTP_SESSION = None
         if _PAGES_FH is not None:
             _PAGES_FH.close()
         _PAGES_FH = None
+
+        print("\n=== Crawl Summary ===")
+        print(f"Pages collected: {pages_written}")
+        print(f"Remaining queue: {len(q)}")
+        print("Session closed cleanly.")
 
 
 if __name__ == "__main__":
