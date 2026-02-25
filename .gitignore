@@ -11,5 +11,7 @@ data/.jsonl
 data/**/*.jsonl
 data/**/*.json
 data/**/*.pt
+exports/*
+exports/**/*
 diff.txt
 
