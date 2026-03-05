@@ -5,9 +5,8 @@ pycache/
 *.pyd
 .env
 .DS_Store
-data/*
-data/**/*
-exports/*
-exports/**/*
+custom-dataset-loader/data/*
+custom-dataset-loader/data/**/*
+custom-dataset-loader/exports/*
+custom-dataset-loader/exports/**/*
 diff.txt
-
