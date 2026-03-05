@@ -1,0 +1,12 @@
+__pycache__/
+pycache/
+*.pyc
+*.pyo
+*.pyd
+.env
+.DS_Store
+custom-dataset-loader/data/*
+custom-dataset-loader/data/**/*
+custom-dataset-loader/exports/*
+custom-dataset-loader/exports/**/*
+diff.txt
