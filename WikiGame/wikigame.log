@@ -1,0 +1,245 @@
+2026-03-04 11:30:52,058 [INFO] numexpr.utils: NumExpr defaulting to 8 threads.
+2026-03-04 11:30:53,955 [INFO] core.embedder: Loading embedding model: all-MiniLM-L6-v2
+2026-03-04 11:30:54,100 [INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: mps
+2026-03-04 11:30:54,100 [INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2026-03-04 11:30:54,273 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:30:54,290 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/modules.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:54,313 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/modules.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:54,366 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:30:54,382 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config_sentence_transformers.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:54,406 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config_sentence_transformers.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:54,454 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:30:54,454 [WARNING] huggingface_hub.utils._http: Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-03-04 11:30:54,475 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config_sentence_transformers.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:54,510 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:30:54,535 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/README.md "HTTP/1.1 200 OK"
+2026-03-04 11:30:54,553 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/README.md "HTTP/1.1 200 OK"
+2026-03-04 11:30:54,588 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:30:54,605 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/modules.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:54,646 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:30:54,663 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/sentence_bert_config.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:54,681 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/sentence_bert_config.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:54,724 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json "HTTP/1.1 404 Not Found"
+2026-03-04 11:30:54,759 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:30:54,776 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:54,794 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:54,956 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/model.safetensors "HTTP/1.1 302 Found"
+2026-03-04 11:30:55,305 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/sentence-transformers/all-MiniLM-L6-v2/xet-read-token/c9745ed1d9f207416be6d2e6f8de32d1f16199bf "HTTP/1.1 200 OK"
+2026-03-04 11:30:57,826 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:30:57,842 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:57,873 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:30:57,889 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:57,905 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:57,941 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/sentence-transformers/all-MiniLM-L6-v2/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+2026-03-04 11:30:57,985 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/sentence-transformers/all-MiniLM-L6-v2/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
+2026-03-04 11:30:58,021 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/vocab.txt "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:30:58,041 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/vocab.txt "HTTP/1.1 200 OK"
+2026-03-04 11:30:58,061 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/vocab.txt "HTTP/1.1 200 OK"
+2026-03-04 11:30:58,119 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:30:58,137 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/tokenizer.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:58,158 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/tokenizer.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:58,209 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/added_tokens.json "HTTP/1.1 404 Not Found"
+2026-03-04 11:30:58,239 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/special_tokens_map.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:30:58,258 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/special_tokens_map.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:58,274 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/special_tokens_map.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:58,306 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/chat_template.jinja "HTTP/1.1 404 Not Found"
+2026-03-04 11:30:58,392 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/1_Pooling/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:30:58,422 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/1_Pooling%2Fconfig.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:58,445 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/1_Pooling%2Fconfig.json "HTTP/1.1 200 OK"
+2026-03-04 11:30:58,510 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/sentence-transformers/all-MiniLM-L6-v2 "HTTP/1.1 200 OK"
+2026-03-04 11:30:58,901 [INFO] core.embedder: Embedding model loaded.
+2026-03-04 11:31:02,772 [INFO] search.gliner_filter: Loading GLiNER model: urchade/gliner_medium-v2.1
+2026-03-04 11:31:02,824 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/urchade/gliner_medium-v2.1/revision/main "HTTP/1.1 200 OK"
+2026-03-04 11:31:02,854 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/urchade/gliner_medium-v2.1/resolve/40ec419335d09393f298636f471328b722c6da9e/gliner_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:31:02,871 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/urchade/gliner_medium-v2.1/40ec419335d09393f298636f471328b722c6da9e/gliner_config.json "HTTP/1.1 200 OK"
+2026-03-04 11:31:02,893 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/resolve-cache/models/urchade/gliner_medium-v2.1/40ec419335d09393f298636f471328b722c6da9e/gliner_config.json "HTTP/1.1 200 OK"
+2026-03-04 11:31:02,893 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/urchade/gliner_medium-v2.1/resolve/40ec419335d09393f298636f471328b722c6da9e/README.md "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:31:02,893 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/urchade/gliner_medium-v2.1/resolve/40ec419335d09393f298636f471328b722c6da9e/.gitattributes "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:31:02,918 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/urchade/gliner_medium-v2.1/resolve/40ec419335d09393f298636f471328b722c6da9e/pytorch_model.bin "HTTP/1.1 302 Found"
+2026-03-04 11:31:02,918 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/urchade/gliner_medium-v2.1/resolve/40ec419335d09393f298636f471328b722c6da9e/model.safetensors "HTTP/1.1 302 Found"
+2026-03-04 11:31:02,927 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/urchade/gliner_medium-v2.1/40ec419335d09393f298636f471328b722c6da9e/.gitattributes "HTTP/1.1 200 OK"
+2026-03-04 11:31:02,927 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/urchade/gliner_medium-v2.1/40ec419335d09393f298636f471328b722c6da9e/README.md "HTTP/1.1 200 OK"
+2026-03-04 11:31:02,949 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/resolve-cache/models/urchade/gliner_medium-v2.1/40ec419335d09393f298636f471328b722c6da9e/.gitattributes "HTTP/1.1 200 OK"
+2026-03-04 11:31:02,950 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/resolve-cache/models/urchade/gliner_medium-v2.1/40ec419335d09393f298636f471328b722c6da9e/README.md "HTTP/1.1 200 OK"
+2026-03-04 11:31:02,954 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/urchade/gliner_medium-v2.1/xet-read-token/40ec419335d09393f298636f471328b722c6da9e "HTTP/1.1 200 OK"
+2026-03-04 11:31:02,958 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/urchade/gliner_medium-v2.1/xet-read-token/40ec419335d09393f298636f471328b722c6da9e "HTTP/1.1 200 OK"
+2026-03-04 11:31:40,599 [INFO] gliner.model: Loading the following GLiNER type: <class 'gliner.model.UniEncoderSpanGLiNER'>...
+2026-03-04 11:31:40,679 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/microsoft/deberta-v3-base/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:31:40,696 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/microsoft/deberta-v3-base/8ccc9b6f36199bec6961081d44eb72fb3f7353f3/config.json "HTTP/1.1 200 OK"
+2026-03-04 11:31:40,714 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/resolve-cache/models/microsoft/deberta-v3-base/8ccc9b6f36199bec6961081d44eb72fb3f7353f3/config.json "HTTP/1.1 200 OK"
+2026-03-04 11:31:40,750 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/microsoft/deberta-v3-base/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:31:40,766 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/microsoft/deberta-v3-base/8ccc9b6f36199bec6961081d44eb72fb3f7353f3/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-03-04 11:31:40,783 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/resolve-cache/models/microsoft/deberta-v3-base/8ccc9b6f36199bec6961081d44eb72fb3f7353f3/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-03-04 11:31:40,820 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/microsoft/deberta-v3-base/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+2026-03-04 11:31:40,858 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/microsoft/deberta-v3-base/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
+2026-03-04 11:31:40,895 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/microsoft/deberta-v3-base/resolve/main/spm.model "HTTP/1.1 302 Found"
+2026-03-04 11:31:40,929 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/microsoft/deberta-v3-base/xet-read-token/8ccc9b6f36199bec6961081d44eb72fb3f7353f3 "HTTP/1.1 200 OK"
+2026-03-04 11:31:41,579 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/microsoft/deberta-v3-base/resolve/main/tokenizer.json "HTTP/1.1 404 Not Found"
+2026-03-04 11:31:41,632 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/microsoft/deberta-v3-base/resolve/main/added_tokens.json "HTTP/1.1 404 Not Found"
+2026-03-04 11:31:41,671 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/microsoft/deberta-v3-base/resolve/main/special_tokens_map.json "HTTP/1.1 404 Not Found"
+2026-03-04 11:31:41,705 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/microsoft/deberta-v3-base/resolve/main/chat_template.jinja "HTTP/1.1 404 Not Found"
+2026-03-04 11:31:42,205 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/microsoft/deberta-v3-base "HTTP/1.1 200 OK"
+2026-03-04 11:31:42,237 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/microsoft/deberta-v3-base/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:31:42,252 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/microsoft/deberta-v3-base/8ccc9b6f36199bec6961081d44eb72fb3f7353f3/config.json "HTTP/1.1 200 OK"
+2026-03-04 11:31:47,223 [INFO] search.gliner_filter: GLiNER model loaded.
+2026-03-04 11:31:47,438 [INFO] search.gliner_filter: Target entities indexed: ['Alan Turing', 'Alan Mathison Turing', '23 June 1912', '7 June 1954', 'English', 'logician', 'theoretical biologist', 'theoretical computer science', 'algorithm', 'computation']
+2026-03-04 11:31:47,438 [INFO] search.ranker: Ranker target set: 'Alan Turing'
+2026-03-04 11:31:47,605 [INFO] graph.wild_graph: WildGraph initialized: 'Pizza' → 'Alan Turing'
+2026-03-04 11:32:19,593 [WARNING] llm.llama_agent: LLM call failed: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=30). Defaulting to top embedding candidate.
+2026-03-04 11:32:19,611 [INFO] search.ranker: LLM chose: 'Wayback Machine' — LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,629 [INFO] graph.wild_graph: Hop 1: Pizza → Wayback Machine (score: 0.262)
+2026-03-04 11:32:19,630 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,630 [INFO] graph.wild_graph: Hop 1: Pizza → Aeneas (score: 0.065)
+2026-03-04 11:32:19,630 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,649 [INFO] graph.wild_graph: Hop 1: Pizza → Notability in the English Wikipedia (score: 0.062)
+2026-03-04 11:32:19,649 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,649 [INFO] graph.wild_graph: Hop 1: Pizza → Alchermes (score: 0.049)
+2026-03-04 11:32:19,649 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,649 [INFO] graph.wild_graph: Hop 1: Pizza → Acquacotta (score: 0.048)
+2026-03-04 11:32:19,649 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,649 [INFO] graph.wild_graph: Hop 1: Pizza → Aeneid (score: 0.034)
+2026-03-04 11:32:19,650 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,650 [INFO] graph.wild_graph: Hop 1: Pizza → Achaemenid Empire (score: 0.033)
+2026-03-04 11:32:19,650 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,677 [INFO] graph.wild_graph: Hop 1: Pizza → History of pizza (score: 0.033)
+2026-03-04 11:32:19,677 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,678 [INFO] graph.wild_graph: Hop 1: Pizza → Abbacchio (score: 0.030)
+2026-03-04 11:32:19,678 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,678 [INFO] graph.wild_graph: Hop 1: Pizza → Aligot (score: 0.029)
+2026-03-04 11:32:19,678 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,678 [INFO] graph.wild_graph: Hop 1: Pizza → Oxford English Dictionary (score: 0.022)
+2026-03-04 11:32:19,678 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,678 [INFO] graph.wild_graph: Hop 1: Pizza → Alivenci (score: 0.017)
+2026-03-04 11:32:19,678 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,681 [INFO] graph.wild_graph: Hop 1: Pizza → Aculops lycopersici (score: 0.015)
+2026-03-04 11:32:19,681 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,681 [INFO] graph.wild_graph: Hop 1: Pizza → Almogrote (score: 0.012)
+2026-03-04 11:32:19,681 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,681 [INFO] graph.wild_graph: Hop 1: Pizza → Pizza cheese (score: 0.004)
+2026-03-04 11:32:19,681 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,681 [INFO] graph.wild_graph: Hop 1: Pizza → Ailsa Craig tomato (score: 0.003)
+2026-03-04 11:32:19,681 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,681 [INFO] graph.wild_graph: Hop 1: Pizza → Argentine pizza (score: -0.003)
+2026-03-04 11:32:19,681 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,682 [INFO] graph.wild_graph: Hop 1: Pizza → Affogato (score: -0.004)
+2026-03-04 11:32:19,682 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,683 [INFO] graph.wild_graph: Hop 1: Pizza → Pizzaiolo (restaurant chain) (score: -0.011)
+2026-03-04 11:32:19,683 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,683 [INFO] graph.wild_graph: Hop 1: Pizza → Alicante tomato (score: -0.014)
+2026-03-04 11:32:19,683 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,683 [INFO] graph.wild_graph: Hop 1: Pizza → Abruzzo (wine region) (score: -0.014)
+2026-03-04 11:32:19,683 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,683 [INFO] graph.wild_graph: Hop 1: Pizza → Pizza (disambiguation) (score: -0.020)
+2026-03-04 11:32:19,683 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,683 [INFO] graph.wild_graph: Hop 1: Pizza → Pizza in the United States (score: -0.042)
+2026-03-04 11:32:19,683 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,683 [INFO] graph.wild_graph: Hop 1: Pizza → List of pizza varieties by country (score: -0.045)
+2026-03-04 11:32:19,683 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:19,684 [INFO] graph.wild_graph: Hop 1: Pizza → 2010 United States tomato shortage (score: -0.049)
+2026-03-04 11:32:19,684 [INFO] graph.wild_graph:   Reasoning: LLM unavailable, used embedding ranking
+2026-03-04 11:32:26,812 [INFO] search.ranker: LLM chose: 'AI' — AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to 
+2026-03-04 11:32:26,821 [INFO] graph.wild_graph: Hop 2: Wayback Machine → AI (score: 0.310)
+2026-03-04 11:32:26,826 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,826 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Library and information science (score: 0.132)
+2026-03-04 11:32:26,826 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,826 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Alfred P. Sloan Foundation (score: 0.131)
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Internet as a source of prior art (score: 0.124)
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Ars Technica (score: 0.113)
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Library Genesis (score: 0.093)
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Z-Library (score: 0.091)
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Social science (score: 0.087)
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Alexa Internet (score: 0.085)
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Wayback Machine (Peabody's Improbable History) (score: 0.084)
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Heritrix (score: 0.076)
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Computer Fraud and Abuse Act (score: 0.075)
+2026-03-04 11:32:26,827 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Time capsule (score: 0.074)
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Scientology and the Internet (score: 0.060)
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph: Hop 2: Wayback Machine → March for Science (score: 0.059)
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Ad server (score: 0.057)
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Bibliotheca Alexandrina (score: 0.050)
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Arctic World Archive (score: 0.048)
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Archive.today (score: 0.043)
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Billion (score: 0.041)
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Anna's Archive (score: 0.030)
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Archive Team (score: 0.028)
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Alison Macrina (score: 0.022)
+2026-03-04 11:32:26,828 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,829 [INFO] graph.wild_graph: Hop 2: Wayback Machine → Link rot (score: -0.030)
+2026-03-04 11:32:26,829 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:26,829 [INFO] graph.wild_graph: Hop 2: Wayback Machine → 501(c)(3) organization (score: -0.039)
+2026-03-04 11:32:26,829 [INFO] graph.wild_graph:   Reasoning: AI is a field closely related to Alan Turing's work and legacy, making it the most relevant link to click to get closer to the target page.
+2026-03-04 11:32:35,458 [INFO] search.ranker: LLM chose: 'Aeneads' — Aeneads is a term related to the Aeneid, an epic poem that has been studied and referenced in variou
+2026-03-04 11:32:42,374 [INFO] search.ranker: LLM chose: 'Alan MacMasters hoax' — The link to Alan MacMasters hoax is the most relevant as it is a notable figure in the history of Al
+2026-03-04 11:32:48,722 [INFO] search.ranker: LLM chose: 'Alan Turing' — The link to Alan Turing has the highest relevance and is the most direct connection to the target pa
+2026-03-04 11:32:48,726 [INFO] graph.wild_graph: Hop 3: AI → Alan Turing (score: 0.629)
+2026-03-04 11:32:48,726 [INFO] graph.wild_graph:   Reasoning: The link to Alan Turing has the highest relevance and is the most direct connection to the target page.
+2026-03-04 11:32:48,726 [INFO] graph.wild_graph: 🎯 Target reached! Path: Path(Pizza → Wayback Machine → AI → Alan Turing, score=1.201)
+2026-03-04 11:56:14,455 [INFO] numexpr.utils: NumExpr defaulting to 8 threads.
+2026-03-04 11:56:15,436 [INFO] core.embedder: Loading embedding model: all-MiniLM-L6-v2
+2026-03-04 11:56:15,520 [INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: mps
+2026-03-04 11:56:15,520 [INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2026-03-04 11:56:15,633 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:56:15,651 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/modules.json "HTTP/1.1 200 OK"
+2026-03-04 11:56:15,684 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:56:15,701 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config_sentence_transformers.json "HTTP/1.1 200 OK"
+2026-03-04 11:56:15,735 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:56:15,753 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config_sentence_transformers.json "HTTP/1.1 200 OK"
+2026-03-04 11:56:15,788 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:56:15,805 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/README.md "HTTP/1.1 200 OK"
+2026-03-04 11:56:15,835 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:56:15,851 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/modules.json "HTTP/1.1 200 OK"
+2026-03-04 11:56:15,885 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:56:15,901 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/sentence_bert_config.json "HTTP/1.1 200 OK"
+2026-03-04 11:56:15,934 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json "HTTP/1.1 404 Not Found"
+2026-03-04 11:56:15,965 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:56:15,981 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config.json "HTTP/1.1 200 OK"
+2026-03-04 11:56:16,201 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:56:16,216 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config.json "HTTP/1.1 200 OK"
+2026-03-04 11:56:16,246 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:56:16,264 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-03-04 11:56:16,298 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/sentence-transformers/all-MiniLM-L6-v2/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+2026-03-04 11:56:16,336 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/sentence-transformers/all-MiniLM-L6-v2/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
+2026-03-04 11:56:16,428 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/1_Pooling/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:56:16,468 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/1_Pooling%2Fconfig.json "HTTP/1.1 200 OK"
+2026-03-04 11:56:16,558 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/sentence-transformers/all-MiniLM-L6-v2 "HTTP/1.1 200 OK"
+2026-03-04 11:56:16,898 [INFO] core.embedder: Embedding model loaded.
+2026-03-04 11:56:18,469 [INFO] search.gliner_filter: Loading GLiNER model: urchade/gliner_medium-v2.1
+2026-03-04 11:56:18,502 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/urchade/gliner_medium-v2.1/revision/main "HTTP/1.1 200 OK"
+2026-03-04 11:56:18,505 [INFO] gliner.model: Loading the following GLiNER type: <class 'gliner.model.UniEncoderSpanGLiNER'>...
+2026-03-04 11:56:18,536 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/microsoft/deberta-v3-base/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:56:18,559 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/microsoft/deberta-v3-base/8ccc9b6f36199bec6961081d44eb72fb3f7353f3/config.json "HTTP/1.1 200 OK"
+2026-03-04 11:56:18,589 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/microsoft/deberta-v3-base/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:56:18,605 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/microsoft/deberta-v3-base/8ccc9b6f36199bec6961081d44eb72fb3f7353f3/tokenizer_config.json "HTTP/1.1 200 OK"
+2026-03-04 11:56:18,638 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/microsoft/deberta-v3-base/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
+2026-03-04 11:56:18,679 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/microsoft/deberta-v3-base/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
+2026-03-04 11:56:19,031 [INFO] httpx: HTTP Request: GET https://huggingface.co/api/models/microsoft/deberta-v3-base "HTTP/1.1 200 OK"
+2026-03-04 11:56:19,063 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/microsoft/deberta-v3-base/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
+2026-03-04 11:56:19,078 [INFO] httpx: HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/microsoft/deberta-v3-base/8ccc9b6f36199bec6961081d44eb72fb3f7353f3/config.json "HTTP/1.1 200 OK"
+2026-03-04 11:56:24,115 [INFO] search.gliner_filter: GLiNER model loaded.
+2026-03-04 11:56:24,383 [INFO] search.gliner_filter: Target entities indexed: ['World War II', 'World War\xa0II', 'Second World War', 'Allies', 'Axis powers', 'Tanks', 'aircraft', 'World War II', 'genocides', 'Holocaust']
+2026-03-04 11:56:24,384 [INFO] search.ranker: Ranker target set: 'World War II'
+2026-03-04 11:56:24,562 [INFO] graph.wild_graph: WildGraph initialized: 'Jazz' → 'World War II'
+2026-03-04 11:56:39,850 [INFO] search.ranker: LLM chose: 'World War II' — The relevance score is high, indicating a direct connection between jazz and World War II, likely du
+2026-03-04 11:56:39,866 [INFO] graph.wild_graph: Hop 1: Jazz → World War II (score: 0.634)
+2026-03-04 11:56:39,866 [INFO] graph.wild_graph:   Reasoning: The relevance score is high, indicating a direct connection between jazz and World War II, likely due to the historical context of jazz's development during the war era.
+2026-03-04 11:56:39,867 [INFO] graph.wild_graph: 🎯 Target reached! Path: Path(Jazz → World War II, score=0.634)
