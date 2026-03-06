@@ -27,10 +27,9 @@ load_dotenv()
 
 # API configuration - set via environment variables or .env file
 # Supports OpenAI-compatible APIs (OpenAI, Anthropic, Azure, etc.)
-APY_KEY = os.environ.get("EVAL_API_KEY", os.environ.get("OPENAI_API_KEY", "YOUR_API_KEY_HERE"))
-BASE_URL = os.environ.get("EVAL_BASE_URL", os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1"))
-MODEL = os.environ.get("EVAL_MODEL", "gpt-5-mini")
-
+APY_KEY = 'ollama'
+BASE_URL = 'http://localhost:11434/v1'
+MODEL = 'llama3.1'
 # -----------------------
 # Async Claude API helpers
 # -----------------------
