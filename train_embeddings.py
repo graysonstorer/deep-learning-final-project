@@ -16,6 +16,10 @@ REPO_PATH = 'WildGraphBench'
 DOMAIN = 'culture'
 PATH = path = f"{REPO_PATH}/QA/{DOMAIN}/questions.jsonl"
 
+from sklearn.model_selection import train_test_split
+
+# Split questions and gold answers into train/val
+
 def build_training_pairs(questions, all_chunks, top_k=3):
     """
     For each question, retrieve top-k chunks as positives,
@@ -107,7 +111,6 @@ def get_positive_chunks(questions, gold_answers, all_chunks_with_ids, embed_mode
     return retrieved_positives
 
 
-
 questions, gold_answers = load_questions(PATH)
 retrieved_positives = get_positive_chunks(questions,
                                           gold_answers,
@@ -121,6 +124,62 @@ retrieved_positives = get_positive_chunks(questions,
 # Build pairs — just (question, positive_chunk), no explicit negatives needed
 # MNRL uses other items in the batch as negatives
 
+
+train_questions, val_questions, train_answers, val_answers = train_test_split(
+    questions, gold_answers, test_size=0.2, random_state=42
+)
+
+
+all_chunks_with_ids = load_reference_pages("culture", 'Marvel Cinematic Universe', chunk_size=300)
+
+train_positives = get_positive_chunks(train_questions, train_answers, all_chunks_with_ids, embed_model)
+val_positives   = get_positive_chunks(val_questions,   val_answers,   all_chunks_with_ids, embed_model)
+
+
+train_examples = [InputExample(texts=[q, chunk])
+                  for q, chunks in zip(train_questions, train_positives)
+                  for chunk in chunks]
+
+val_examples = [InputExample(texts=[q, chunk])
+                for q, chunks in zip(val_questions, val_positives)
+                for chunk in chunks]
+
+train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=16)
+# val_dataloader is used by the evaluator, not fit() directly
+
+
+# --- TRAIN evaluator ---
+train_queries      = {str(i): q for i, q in enumerate(train_questions)}
+train_corpus       = {str(i): c for i, c in enumerate([c for chunks in train_positives for c in chunks])}
+train_relevant     = {}
+idx = 0
+for i, chunks in enumerate(train_positives):
+    train_relevant[str(i)] = set()
+    for _ in chunks:
+        train_relevant[str(i)].add(str(idx)); idx += 1
+
+train_evaluator = InformationRetrievalEvaluator(
+    queries=train_queries, corpus=train_corpus, relevant_docs=train_relevant,
+    name="train-eval", precision_recall_at_k=[1, 3, 5]
+)
+
+# --- VAL evaluator (this is what you pass to fit()) ---
+val_queries    = {str(i): q for i, q in enumerate(val_questions)}
+val_corpus     = {str(i): c for i, c in enumerate([c for chunks in val_positives for c in chunks])}
+val_relevant   = {}
+idx = 0
+for i, chunks in enumerate(val_positives):
+    val_relevant[str(i)] = set()
+    for _ in chunks:
+        val_relevant[str(i)].add(str(idx)); idx += 1
+
+val_evaluator = InformationRetrievalEvaluator(
+    queries=val_queries, corpus=val_corpus, relevant_docs=val_relevant,
+    name="val-eval", precision_recall_at_k=[1, 3, 5]
+)
+
+train_eval_scores = []
+val_eval_scores = []
 
 
 
@@ -152,62 +211,118 @@ train_loss.forward = types.MethodType(tracked_forward, train_loss)
 queries = {str(i): q for i, q in enumerate(questions)}
 corpus = {str(i): chunk for i, chunk in enumerate([chunk for chunks in retrieved_positives for chunk in chunks])}
 
-relevant_docs = {}
-idx = 0
-for i, pos_chunks in enumerate(retrieved_positives):
-    relevant_docs[str(i)] = set()
-    for chunk in pos_chunks:
-        relevant_docs[str(i)].add(str(idx))
-        idx += 1
 
-evaluator = InformationRetrievalEvaluator(
-    queries=queries,
-    corpus=corpus,
-    relevant_docs=relevant_docs,
-    name="mcu-eval",
-    precision_recall_at_k=[1, 3, 5],
-)
-
-# --- 3. Callback to record epoch losses and eval scores ---
-steps_per_epoch = len(train_dataloader)
+def get_primary_score(result):
+    """Extract a single float from an evaluator result (dict or float)."""
+    if isinstance(result, dict):
+        # Prefer NDCG, otherwise take the first value
+        for key in result:
+            if 'ndcg' in key.lower():
+                return result[key]
+        return list(result.values())[0]
+    return result  # already a float in older versions
 
 def loss_callback(score, epoch, steps):
-    start = int(epoch - 1) * steps_per_epoch
-    end = int(epoch) * steps_per_epoch
-    avg = sum(batch_losses[start:end]) / max(len(batch_losses[start:end]), 1)
+    start = int(epoch - 1) * len(train_dataloader)
+    end   = int(epoch)     * len(train_dataloader)
+    avg   = sum(batch_losses[start:end]) / max(len(batch_losses[start:end]), 1)
     epoch_losses.append(avg)
-    eval_scores.append(score)  # <-- collect directly from callback
-    print(f"Epoch {epoch} | Avg Loss: {avg:.4f} | Eval Score: {score:.4f}")
 
-# --- 4. Train ---
+    val_score   = get_primary_score(score)
+    train_score = get_primary_score(train_evaluator(embed_model))
+
+    val_eval_scores.append(val_score)
+    train_eval_scores.append(train_score)
+
+    print(f"Epoch {epoch} | Loss: {avg:.4f} | Train: {train_score:.4f} | Val: {val_score:.4f}")
+
+
 embed_model.fit(
     train_objectives=[(train_dataloader, train_loss)],
-    epochs=20,
+    epochs=5,
     warmup_steps=50,
     output_path="../mcu-embeddings",
-    evaluator=evaluator,
-    evaluation_steps=steps_per_epoch,
+    evaluator=val_evaluator,  # <-- val evaluator drives early stopping & saving
+    evaluation_steps=len(train_dataloader),
     callback=loss_callback,
     show_progress_bar=True,
 )
 
-# --- 5. Plot ---
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
-
 epochs_range = range(1, len(epoch_losses) + 1)
 
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+
 ax1.plot(epochs_range, epoch_losses, marker='o', color='steelblue')
-ax1.set_xlabel("Epoch")
-ax1.set_ylabel("Avg Loss")
-ax1.set_title("Loss vs Epoch")
-ax1.grid(True)
+ax1.set_title("Loss vs Epoch"); ax1.set_xlabel("Epoch"); ax1.grid(True)
 
-ax2.plot(range(1, len(eval_scores) + 1), eval_scores, marker='o', color='darkorange')
-ax2.set_xlabel("Epoch")
-ax2.set_ylabel("Eval Score")
-ax2.set_title("Retrieval Score vs Epoch")
-ax2.grid(True)
+ax2.plot(epochs_range, train_eval_scores, marker='o', color='steelblue', label='Train')
+ax2.plot(epochs_range, val_eval_scores,   marker='o', color='darkorange', label='Val')
+ax2.set_title("Retrieval Score vs Epoch"); ax2.set_xlabel("Epoch")
+ax2.legend(); ax2.grid(True)
 
-plt.tight_layout()
-plt.show()
+plt.tight_layout(); plt.show()
+
+#
+#
+#
+#
+# relevant_docs = {}
+# idx = 0
+# for i, pos_chunks in enumerate(retrieved_positives):
+#     relevant_docs[str(i)] = set()
+#     for chunk in pos_chunks:
+#         relevant_docs[str(i)].add(str(idx))
+#         idx += 1
+#
+# evaluator = InformationRetrievalEvaluator(
+#     queries=queries,
+#     corpus=corpus,
+#     relevant_docs=relevant_docs,
+#     name="mcu-eval",
+#     precision_recall_at_k=[1, 3, 5],
+# )
+#
+# # --- 3. Callback to record epoch losses and eval scores ---
+# steps_per_epoch = len(train_dataloader)
+#
+# def loss_callback(score, epoch, steps):
+#     start = int(epoch - 1) * steps_per_epoch
+#     end = int(epoch) * steps_per_epoch
+#     avg = sum(batch_losses[start:end]) / max(len(batch_losses[start:end]), 1)
+#     epoch_losses.append(avg)
+#     eval_scores.append(score)  # <-- collect directly from callback
+#     print(f"Epoch {epoch} | Avg Loss: {avg:.4f} | Eval Score: {score:.4f}")
+#
+# # --- 4. Train ---
+# embed_model.fit(
+#     train_objectives=[(train_dataloader, train_loss)],
+#     epochs=20,
+#     warmup_steps=50,
+#     output_path="../mcu-embeddings",
+#     evaluator=evaluator,
+#     evaluation_steps=steps_per_epoch,
+#     callback=loss_callback,
+#     show_progress_bar=True,
+# )
+#
+# # --- 5. Plot ---
+# fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+#
+# epochs_range = range(1, len(epoch_losses) + 1)
+#
+# ax1.plot(epochs_range, epoch_losses, marker='o', color='steelblue')
+# ax1.set_xlabel("Epoch")
+# ax1.set_ylabel("Avg Loss")
+# ax1.set_title("Loss vs Epoch")
+# ax1.grid(True)
+#
+# ax2.plot(range(1, len(eval_scores) + 1), eval_scores, marker='o', color='darkorange')
+# ax2.set_xlabel("Epoch")
+# ax2.set_ylabel("Eval Score")
+# ax2.set_title("Retrieval Score vs Epoch")
+# ax2.grid(True)
+#
+# plt.tight_layout()
+# plt.show()
 
