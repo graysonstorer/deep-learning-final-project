@@ -12,7 +12,7 @@ from datasets import Dataset
 import accelerate
 import os, json, glob
 # Configure device
-device = torch.device('cuda' if torch.cuda.is_available() else 'mps')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f"Using device: {device}")
 
 # Set seeds for reproducibility
@@ -139,8 +139,8 @@ lora_config = LoraConfig(
 
 model = get_peft_model(AutoModelForCausalLM.from_pretrained(
     model_name,
-    torch_dtype=torch.float32,   # use float32 if on CPU
-    device_map=torch.device('mps'),           # automatically uses GPU if available
+    dtype=torch.float32,   # use float32 if on CPU
+    device_map=torch.device('cpu'),           # automatically uses GPU if available
 ), lora_config)
 model.print_trainable_parameters()
 
@@ -194,7 +194,8 @@ training_args = TrainingArguments(
     learning_rate=2e-4,
     fp16=False,
     bf16=False,
-    use_mps_device=True,
+    use_mps_device=False,
+    use_cpu=True,
     logging_steps=10,
     save_strategy="epoch",
 
