@@ -15,17 +15,17 @@ PyTorch, NetworkX, NumPy, json, bs4
 
 `https://aclanthology.org/2025.clicit-1.63.pdf`
 
-https://microsoft.github.io/graphrag/
+`https://microsoft.github.io/graphrag/`
 
-https://www.microsoft.com/en-us/research/blog/graphrag-unlocking-llm-discovery-on-narrative-private-data/
+`https://www.microsoft.com/en-us/research/blog/graphrag-unlocking-llm-discovery-on-narrative-private-data/`
 
-https://github.com/run-llama/llama_index
+`https://github.com/run-llama/llama_index`
 
-https://arxiv.org/pdf/2404.16130
+`https://arxiv.org/pdf/2404.16130`
 
-https://developers.llamaindex.ai/python/examples/cookbooks/graphrag_v2/
+`https://developers.llamaindex.ai/python/examples/cookbooks/graphrag_v2/`
 
-https://developers.llamaindex.ai/python/examples/query_engine/knowledge_graph_rag_query_engine/
+`https://developers.llamaindex.ai/python/examples/query_engine/knowledge_graph_rag_query_engine/`
 
 [![Dataset](https://img.shields.io/badge/🤗%20Dataset-WildGraphBench-yellow)](https://arxiv.org/pdf/2602.02053#cite.edge2025localglobalgraphrag)
 
