@@ -19,6 +19,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "mps")
 EMBED_MODEL = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
 LOSS_FN = losses.MultipleNegativesRankingLoss(EMBED_MODEL)
 EPOCHS = 5
+OUTPUT_PATH = 'replace_with_where_to_save_model_weights'
 REPO_PATH = "WildGraphBench"
 DOMAIN_TUPLES = [('culture', 'Marvel Cinematic Universe'), ('geography', 'United States'),
                  ('health', 'COVID-19 pandemic'), ('history', 'World War II'),
@@ -71,28 +72,36 @@ def load_reference_pages(domain_tuple, chunk_size=300):
 
 def get_positive_chunks(questions, gold_answers, all_chunks_with_ids, embed_model, top_k=3, cached_embeddings=None):
     all_chunk_texts = [chunk_tuple[1] for chunk_tuple in all_chunks_with_ids]
-
-    # Use cached embeddings if provided, otherwise compute
     chunk_embeddings = cached_embeddings if cached_embeddings is not None \
-        else embed_model.encode(all_chunk_texts, convert_to_tensor=True)
+        else embed_model.encode(all_chunk_texts, convert_to_tensor=True, batch_size=512)
 
-    retrieved_positives = []
-    for question, answer in zip(questions, gold_answers):
+    # Pre-score all questions by word overlap
+    scored_list = []
+    needs_embedding = []  # indices that fall back to semantic search
+    for idx, (question, answer) in enumerate(zip(questions, gold_answers)):
         answer_words = set(answer.lower().split())
-        scored = []
-        for chunk_text in all_chunk_texts:
-            chunk_words = set(chunk_text.lower().split())
-            overlap = len(answer_words & chunk_words) / max(len(answer_words), 1)
-            scored.append(overlap)
+        scored = [
+            len(answer_words & set(c.lower().split())) / max(len(answer_words), 1)
+            for c in all_chunk_texts
+        ]
         best_overlap = max(scored)
         if best_overlap > 0.3:
             top_indices = sorted(range(len(scored)), key=lambda i: scored[i], reverse=True)[:top_k]
+            scored_list.append(([all_chunk_texts[i] for i in top_indices], None))
         else:
-            answer_emb = embed_model.encode(answer, convert_to_tensor=True)
-            sims = util.cos_sim(answer_emb, chunk_embeddings)[0]
-            top_indices = sims.topk(top_k).indices.tolist()
-        retrieved_positives.append([all_chunk_texts[i] for i in top_indices])
-    return retrieved_positives
+            scored_list.append((None, answer))  # defer to batch embedding
+            needs_embedding.append((idx, answer))
+
+    # Batch-encode all answers that need semantic fallback
+    if needs_embedding:
+        fallback_answers = [ans for _, ans in needs_embedding]
+        answer_embs = embed_model.encode(fallback_answers, convert_to_tensor=True, batch_size=256)
+        sims_all = util.cos_sim(answer_embs, chunk_embeddings)
+        for j, (orig_idx, _) in enumerate(needs_embedding):
+            top_indices = sims_all[j].topk(top_k).indices.tolist()
+            scored_list[orig_idx] = ([all_chunk_texts[i] for i in top_indices], None)
+
+    return [chunks for chunks, _ in scored_list]
 
 
 def build_training_pairs(questions, all_chunks, top_k=3):
@@ -140,11 +149,21 @@ train_questions, val_questions, train_answers, val_answers = train_test_split(
 # Encode chunks once, reuse for both train and val
 all_chunk_texts = [chunk[1] for chunk in references]
 print("Encoding corpus chunks (once)...")
-cached_chunk_embeddings = embed_model.encode(all_chunk_texts, convert_to_tensor=True, show_progress_bar=True)
+cached_chunk_embeddings = embed_model.encode(all_chunk_texts, convert_to_tensor=True, show_progress_bar=True, batch_size=512)
 
-train_positives = get_positive_chunks(train_questions, train_answers, references, embed_model, cached_embeddings=cached_chunk_embeddings)
-val_positives   = get_positive_chunks(val_questions,   val_answers,   references, embed_model, cached_embeddings=cached_chunk_embeddings)
+# train_positives = get_positive_chunks(train_questions, train_answers, references, embed_model, cached_embeddings=cached_chunk_embeddings)
+# val_positives   = get_positive_chunks(val_questions,   val_answers,   references, embed_model, cached_embeddings=cached_chunk_embeddings)
 
+# GPU accelerated alternative to the commented out block above.
+print("Finding positive chunks for train...")
+train_answer_embs = embed_model.encode(train_answers, convert_to_tensor=True, batch_size=256, show_progress_bar=True)
+train_sims = util.cos_sim(train_answer_embs, cached_chunk_embeddings)
+train_positives = [[all_chunk_texts[i] for i in row.topk(3).indices.tolist()] for row in train_sims]
+
+print("Finding positive chunks for val...")
+val_answer_embs = embed_model.encode(val_answers, convert_to_tensor=True, batch_size=256, show_progress_bar=True)
+val_sims = util.cos_sim(val_answer_embs, cached_chunk_embeddings)
+val_positives = [[all_chunk_texts[i] for i in row.topk(3).indices.tolist()] for row in val_sims]
 
 train_examples = [InputExample(texts=[q, chunk])
                   for q, chunks in zip(train_questions, train_positives)
@@ -154,7 +173,7 @@ val_examples = [InputExample(texts=[q, chunk])
                 for q, chunks in zip(val_questions, val_positives)
                 for chunk in chunks]
 
-train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=16)
+train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=128)
 
 train_queries      = {str(i): q for i, q in enumerate(train_questions)}
 train_corpus       = {str(i): c for i, c in enumerate([c for chunks in train_positives for c in chunks])}
@@ -200,6 +219,13 @@ eval_scores = []
 # Track loss by wrapping the loss function
 _original_forward_fn = train_loss.__class__.forward
 
+def _patched_forward(self, sentence_features, labels=None):
+    loss = _original_forward_fn(self, sentence_features, labels)
+    batch_losses.append(loss.item())
+    return loss
+
+train_loss.__class__.forward = _patched_forward
+
 #===========================================================================
 # Function Definitions for calculating per epoch performance (score & loss)
 #===========================================================================
@@ -227,7 +253,9 @@ def loss_callback(score, epoch, steps):
         train_eval_scores.append((epoch, train_score))  # store epoch too since we skip some
         print(f"Epoch {epoch} | Loss: {avg:.4f} | Train: {train_score:.4f} | Val: {val_score:.4f}")
     else:
-        print(f"Epoch {epoch} | Loss: {avg:.4f} | Val: {val_score:.4f}")
+        train_score = get_primary_score(train_evaluator(embed_model))
+        train_eval_scores.append((epoch, train_score))  # store epoch too since we skip some
+        print(f"Epoch {epoch} | Loss: {avg:.4f} | Train: {train_score:.4f} | Val: {val_score:.4f}")
 
 #=========================================================
 #                    Train the model
@@ -243,7 +271,12 @@ embed_model.fit(
     evaluation_steps=len(train_dataloader),
     callback=loss_callback,
     show_progress_bar=True,
+    use_amp=True # another way of making super sure we are forcing it to use cuda
 )
+
+
+# restore monkey-patch
+train_loss.__class__.forward = _original_forward_fn
 
 
 #========================================================
@@ -267,3 +300,6 @@ ax2.legend()
 ax2.grid(True)
 plt.tight_layout()
 plt.show()
+
+
+embed_model.save(OUTPUT_PATH)
