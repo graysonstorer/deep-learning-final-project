@@ -25,9 +25,9 @@
       "eval_loss": 1.5255298614501953,
       "eval_mean_token_accuracy": 0.6765116538320269,
       "eval_num_tokens": 112640.0,
-      "eval_runtime": 39.288,
-      "eval_samples_per_second": 0.331,
-      "eval_steps_per_second": 0.178,
+      "eval_runtime": 38.1416,
+      "eval_samples_per_second": 0.341,
+      "eval_steps_per_second": 0.184,
       "step": 14
     }
   ],

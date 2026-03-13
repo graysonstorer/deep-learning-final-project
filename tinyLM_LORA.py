@@ -140,7 +140,7 @@ lora_config = LoraConfig(
 model = get_peft_model(AutoModelForCausalLM.from_pretrained(
     model_name,
     dtype=torch.float32,   # use float32 if on CPU
-    device_map=torch.device('cpu'),           # automatically uses GPU if available
+    device_map=torch.device('cpu'),
 ), lora_config)
 model.print_trainable_parameters()
 
@@ -149,6 +149,7 @@ model.print_trainable_parameters()
 questions, gold_answers = load_questions(PATH)
 all_chunks = load_reference_pages(DOMAIN, TOPIC)
 embed_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+trained_embed_model = SentenceTransformer("./all_embeddings")
 retrieved_positives = get_positive_chunks(questions, gold_answers, all_chunks, embed_model)
 
 
