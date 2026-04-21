@@ -26,6 +26,7 @@ The repository also includes a separate dataset-construction module in `custom-d
 - `compare_retrievers.py`: compares the WildGraphBench retriever and the custom retriever on the WildGraphBench QA benchmark, with optional fixed-generator RAG evaluation
 - `tinyLM_LORA.py`: builds retrieved-context QA examples and LoRA fine-tunes TinyLlama
 - `lora_with_and_without_trained_embeddings.py`: compares downstream RAG quality with base vs. trained embeddings
+- `colab/`: thin Google Colab wrapper notebooks that mount Drive, verify prerequisites, and launch the canonical `.py` entry points without duplicating training logic
 - `Lora_trained_vs_untrained_embeddings.ipynb`, `train_embeddings.ipynb`, `transfer_learning.ipynb`, `transfer_learning_mistral.ipynb`: exploratory notebooks for training and comparison experiments
 - `WildGraphBench/`: benchmark data and tooling used for retrieval and QA experiments
 - `WikiGame/`: a related GraphRAG-style Wikipedia navigation project included in this repo, but separate from the main final-project training pipeline
@@ -58,11 +59,35 @@ For the training scripts and notebooks, you will also need the usual Hugging Fac
 - `transformers`
 - `datasets`
 - `accelerate`
+- `sentence-transformers`
 - `peft`
 - `trl`
 - `scikit-learn`
 - `matplotlib`
 - `beautifulsoup4`
+
+## Colab Wrapper Notebooks
+
+The notebooks under `colab/` exist to support the intended execution workflow for this project:
+
+1. edit code locally in Cursor
+2. keep the repository inside a Google Drive-synced folder
+3. run training and evaluation from Google Colab against that same synced repo
+
+These notebooks are intentionally a **wrapper layer**, not a second implementation of the pipeline. Their job is to:
+
+- mount Google Drive
+- `cd` into the synced repo root
+- install any missing dependencies
+- verify the required dataset artifacts and checkpoint directories exist
+- launch the existing Python scripts with `!python ...`
+
+This keeps the `.py` files as the source of truth and avoids notebook-specific drift or stale interpreter state. In particular:
+
+- `colab/train_custom_retriever.ipynb` wraps `train_custom_retriever.py`
+- `colab/compare_retrievers.ipynb` wraps `compare_retrievers.py`
+
+The notebooks assume you are using a Drive-backed copy of this repository. If your generated custom dataset artifacts already exist locally, the preferred path is to sync them into that Drive-backed repo and run the notebooks there. Only rerun the custom dataset pipeline if those generated artifacts are not available.
 
 ## Main Workflow
 
@@ -118,9 +143,11 @@ To compare retrievers on the **existing WildGraphBench QA benchmark** without re
 python3 compare_retrievers.py \
   --custom_embedder_path ./custom_all_embeddings \
   --wildgraph_embedder_path ./all_embeddings \
-  --domain culture \
-  --topic "Marvel Cinematic Universe"
+  --domain "<existing-domain>" \
+  --topic "<existing-topic>"
 ```
+
+The `domain` and `topic` values must match directories that actually exist under `WildGraphBench/QA/` and `WildGraphBench/corpus/`. The Colab wrapper notebook is designed to inspect the synced benchmark tree and help you choose a valid on-disk pair instead of hardcoding example values.
 
 Optional fixed-generator evaluation with an existing LoRA checkpoint:
 
@@ -128,8 +155,8 @@ Optional fixed-generator evaluation with an existing LoRA checkpoint:
 python3 compare_retrievers.py \
   --custom_embedder_path ./custom_all_embeddings \
   --wildgraph_embedder_path ./all_embeddings \
-  --domain culture \
-  --topic "Marvel Cinematic Universe" \
+  --domain "<existing-domain>" \
+  --topic "<existing-topic>" \
   --lora_checkpoint ./tinyllama-lora-mcu
 ```
 
