@@ -127,3 +127,49 @@ This repository focuses on dataset engineering for graph-based machine learning.
 - relational structure generation
 
 Model training is decoupled so that multiple learning approaches can reuse the same dataset.
+
+## Downstream Retriever Training
+
+The artifact `data/embeddings/page_embeddings.pt` is a **precomputed embedding matrix** for the custom corpus. It is useful as a baseline retrieval index, but it is **not** the same thing as a fine-tuned SentenceTransformer checkpoint like the WildGraphBench retriever stored in `../all_embeddings/`.
+
+If you want to train a new retriever from this custom corpus without recrawling:
+
+1. Run the custom dataset pipeline here to produce:
+   - `data/processed/pages_sanitized.jsonl`
+   - `data/processed/links_table.jsonl`
+   - `data/embeddings/page_embeddings.pt`
+2. From the parent repository root, train a new retriever checkpoint:
+
+```bash
+python3 train_custom_retriever.py \
+  --pages_path custom-dataset-loader/data/processed/pages_sanitized.jsonl \
+  --links_path custom-dataset-loader/data/processed/links_table.jsonl \
+  --output_path custom_all_embeddings
+```
+
+This creates a new SentenceTransformer checkpoint directory (for example `custom_all_embeddings/`) using weak supervision from:
+- page title -> page text pairs
+- hyperlink anchor text -> linked target page text pairs
+
+To compare that new retriever against the existing WildGraphBench-tuned retriever on the WildGraphBench QA benchmark:
+
+```bash
+python3 compare_retrievers.py \
+  --custom_embedder_path ./custom_all_embeddings \
+  --wildgraph_embedder_path ./all_embeddings \
+  --domain culture \
+  --topic "Marvel Cinematic Universe"
+```
+
+Optional fixed-generator evaluation using an existing LoRA checkpoint:
+
+```bash
+python3 compare_retrievers.py \
+  --custom_embedder_path ./custom_all_embeddings \
+  --wildgraph_embedder_path ./all_embeddings \
+  --domain culture \
+  --topic "Marvel Cinematic Universe" \
+  --lora_checkpoint ./tinyllama-lora-mcu
+```
+
+This comparison step lets you evaluate the custom retriever first, before deciding whether LoRA retraining is worth the cost.

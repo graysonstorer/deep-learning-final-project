@@ -22,6 +22,8 @@ The repository also includes a separate dataset-construction module in `custom-d
 
 - `train_embeddings.py`: fine-tunes a pretrained retrieval model on a single `WildGraphBench` domain
 - `train_embeddings_all_subjects.py`: scales that fine-tuning workflow across multiple benchmark domains
+- `train_custom_retriever.py`: fine-tunes a new retrieval model from the custom dataset artifacts produced by `custom-dataset-loader/`
+- `compare_retrievers.py`: compares the WildGraphBench retriever and the custom retriever on the WildGraphBench QA benchmark, with optional fixed-generator RAG evaluation
 - `tinyLM_LORA.py`: builds retrieved-context QA examples and LoRA fine-tunes TinyLlama
 - `lora_with_and_without_trained_embeddings.py`: compares downstream RAG quality with base vs. trained embeddings
 - `Lora_trained_vs_untrained_embeddings.ipynb`, `train_embeddings.ipynb`, `transfer_learning.ipynb`, `transfer_learning_mistral.ipynb`: exploratory notebooks for training and comparison experiments
@@ -91,18 +93,59 @@ Use `lora_with_and_without_trained_embeddings.py` and the accompanying notebooks
 - answer quality under RAG
 - training behavior across epochs
 
+### 4. Train and compare a custom retriever
+
+After building the custom corpus with `custom-dataset-loader/`, the main repo can train a new SentenceTransformer retriever **without recrawling**. This path is separate from the original WildGraphBench workflow and does not modify it.
+
+Train a custom retriever checkpoint from the custom dataset artifacts:
+
+```bash
+python3 train_custom_retriever.py \
+  --pages_path custom-dataset-loader/data/processed/pages_sanitized.jsonl \
+  --links_path custom-dataset-loader/data/processed/links_table.jsonl \
+  --output_path custom_all_embeddings
+```
+
+This training path uses weak supervision from the custom dataset itself:
+- page title -> page text self-pairs
+- hyperlink anchor text -> linked target page text pairs
+
+The output is a new SentenceTransformer checkpoint directory (for example `custom_all_embeddings/`), analogous to the existing WildGraphBench checkpoint `all_embeddings/`.
+
+To compare retrievers on the **existing WildGraphBench QA benchmark** without retraining LoRA:
+
+```bash
+python3 compare_retrievers.py \
+  --custom_embedder_path ./custom_all_embeddings \
+  --wildgraph_embedder_path ./all_embeddings \
+  --domain culture \
+  --topic "Marvel Cinematic Universe"
+```
+
+Optional fixed-generator evaluation with an existing LoRA checkpoint:
+
+```bash
+python3 compare_retrievers.py \
+  --custom_embedder_path ./custom_all_embeddings \
+  --wildgraph_embedder_path ./all_embeddings \
+  --domain culture \
+  --topic "Marvel Cinematic Universe" \
+  --lora_checkpoint ./tinyllama-lora-mcu
+```
+
+This is the recommended first comparison step before retraining LoRA on any new retriever.
+
 ## Integrating `custom-dataset-loader/`
 
 `custom-dataset-loader/` is intended to become the larger-scale data source for the main experiments. Its job is to generate a training-ready graph dataset; this repository's job is to train retrieval and generation models on top of that data.
 
-At a high level, the integration plan is:
+At a high level, the current integration path is:
 
 1. Use `custom-dataset-loader/scripts/run_pipeline.py` to build a larger custom Wikipedia dataset.
-2. Export the resulting sanitized pages, embeddings, and graph artifacts from that module.
-3. Adapt the retrieval training scripts in this repository to consume the custom corpus instead of only `WildGraphBench`.
-4. Re-run embedding fine-tuning on the larger dataset.
-5. Use the same custom dataset as training data for LoRA fine-tuning of the language model.
-6. Repeat the pipeline on larger models after the data formatting is stabilized.
+2. Reuse `custom-dataset-loader/data/processed/pages_sanitized.jsonl` and `custom-dataset-loader/data/processed/links_table.jsonl` as the supervision source for `train_custom_retriever.py`.
+3. Save the resulting custom retriever checkpoint separately from `./all_embeddings`.
+4. Compare the custom retriever against the existing WildGraphBench retriever with `compare_retrievers.py`.
+5. Only after retriever quality is validated, decide whether to retrain LoRA against the new retriever.
 
 In other words, `WildGraphBench` is the current benchmark and prototype dataset, while `custom-dataset-loader/` is the planned path toward a larger, more general training corpus.
 
