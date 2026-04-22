@@ -1,0 +1,7 @@
+label,k,recall
+custom,1,0.28
+wildgraph,1,0.28
+custom,3,0.46
+wildgraph,3,0.52
+custom,5,0.6
+wildgraph,5,0.66
