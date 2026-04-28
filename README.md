@@ -40,11 +40,14 @@ Based on the midpoint notes, the project has already completed:
 - LoRA fine-tuning of TinyLlama
 - fine-tuning of a pretrained retrieval embedding model
 - comparison experiments showing stronger performance with fine-tuned embeddings than with the baseline embedder
+- an exploratory custom-dataset retriever experiment using `custom-dataset-loader/` artifacts
+- a direct comparison between the custom retriever and the existing WildGraphBench retriever on the WildGraphBench QA benchmark
 
 The next planned steps are:
 
-- train the retrieval and LoRA pipelines on the larger custom dataset
 - repeat the workflow on stronger models such as Mistral-class models
+
+The earlier plan to continue scaling experiments on the custom dataset has been retired. After running the first custom retriever experiment, the project direction is to keep `WildGraphBench` as the primary retrieval benchmark and embedding source unless the custom-data pipeline is redesigned in a more task-aligned way.
 
 ## Setup
 
@@ -118,9 +121,9 @@ Use `lora_with_and_without_trained_embeddings.py` and the accompanying notebooks
 - answer quality under RAG
 - training behavior across epochs
 
-### 4. Train and compare a custom retriever
+### 4. Exploratory custom retriever experiment
 
-After building the custom corpus with `custom-dataset-loader/`, the main repo can train a new SentenceTransformer retriever **without recrawling**. This path is separate from the original WildGraphBench workflow and does not modify it.
+After building the custom corpus with `custom-dataset-loader/`, the main repo can train a new SentenceTransformer retriever **without recrawling**. This path was explored as an extension of the main workflow, but it is now documented primarily as a completed experiment rather than an active direction.
 
 Train a custom retriever checkpoint from the custom dataset artifacts:
 
@@ -130,6 +133,12 @@ python3 train_custom_retriever.py \
   --links_path custom-dataset-loader/data/processed/links_table.jsonl \
   --output_path custom_all_embeddings
 ```
+
+What we tried with the custom dataset:
+
+- reused `custom-dataset-loader/data/processed/pages_sanitized.jsonl` and `custom-dataset-loader/data/processed/links_table.jsonl`
+- fine-tuned `sentence-transformers/all-MiniLM-L6-v2` with `train_custom_retriever.py`
+- trained on weak supervision from the custom graph structure:
 
 This training path uses weak supervision from the custom dataset itself:
 - page title -> page text self-pairs
@@ -160,13 +169,40 @@ python3 compare_retrievers.py \
   --lora_checkpoint ./tinyllama-lora-mcu
 ```
 
-This is the recommended first comparison step before retraining LoRA on any new retriever.
+This was the recommended first comparison step before retraining LoRA on any new retriever, because it isolates retriever quality first.
+
+### Outcome of the custom retriever experiment
+
+The first benchmark comparison was run on WildGraphBench QA for `culture / Marvel Cinematic Universe` and showed:
+
+- `Recall@1`: custom `0.28`, WildGraphBench `0.28`
+- `Recall@3`: custom `0.46`, WildGraphBench `0.52`
+- `Recall@5`: custom `0.60`, WildGraphBench `0.66`
+
+So the custom retriever was competitive at top-1 recall, but it did not outperform the existing WildGraphBench retriever overall.
+
+### Why the custom dataset is not likely to outperform WildGraphBench as-is
+
+The current custom-dataset training setup is not especially well matched to the evaluation task:
+
+- the WildGraphBench embeddings were fine-tuned on supervision designed for graph/RAG-style retrieval on the same benchmark family
+- the custom retriever was trained with weaker proxy supervision from page titles and hyperlink anchors rather than benchmark question-to-evidence alignment
+- evaluation is based on chunk retrieval for answer-bearing evidence, while the current custom training signal is much closer to page-level semantic relatedness
+
+In other words, the WildGraphBench embeddings are trained with RAG-style retrieval in mind, while the current custom embeddings are trained on a weaker transfer objective. Without major structural changes, the WildGraphBench checkpoint should be expected to remain stronger on the WildGraphBench QA benchmark.
+
+Examples of the kind of changes that would likely be required before expecting the custom dataset to win include:
+
+- chunk-level positive targets instead of whole-page targets
+- stronger or cleaner supervision than title/self-pairs and raw anchor links
+- harder negatives or more benchmark-aligned retrieval objectives
+- possibly hybrid training that combines custom data with benchmark-style supervision
 
 ## Integrating `custom-dataset-loader/`
 
-`custom-dataset-loader/` is intended to become the larger-scale data source for the main experiments. Its job is to generate a training-ready graph dataset; this repository's job is to train retrieval and generation models on top of that data.
+`custom-dataset-loader/` was explored as a possible larger-scale data source for the main experiments. Its job is to generate a training-ready graph dataset; this repository's job is to train retrieval and generation models on top of that data.
 
-At a high level, the current integration path is:
+At a high level, the integration path that was tested is:
 
 1. Use `custom-dataset-loader/scripts/run_pipeline.py` to build a larger custom Wikipedia dataset.
 2. Reuse `custom-dataset-loader/data/processed/pages_sanitized.jsonl` and `custom-dataset-loader/data/processed/links_table.jsonl` as the supervision source for `train_custom_retriever.py`.
@@ -174,7 +210,11 @@ At a high level, the current integration path is:
 4. Compare the custom retriever against the existing WildGraphBench retriever with `compare_retrievers.py`.
 5. Only after retriever quality is validated, decide whether to retrain LoRA against the new retriever.
 
-In other words, `WildGraphBench` is the current benchmark and prototype dataset, while `custom-dataset-loader/` is the planned path toward a larger, more general training corpus.
+That experiment was useful because it demonstrated that the custom dataset can already produce a functioning retriever checkpoint and can be evaluated cleanly against the existing benchmark.
+
+However, this repository is **not** currently continuing experimentation on the custom retriever path. The executive decision is to stop there for now, because the present custom supervision setup is unlikely to beat the WildGraphBench embeddings without a more substantial redesign of the training objective and data structure.
+
+In other words, `WildGraphBench` remains the current benchmark, the current best-performing retriever source, and the main basis for downstream RAG and LoRA experiments in this project. `custom-dataset-loader/` remains a useful exploratory extension, but not the active experimental priority.
 
 For dataset-building details, commands, and artifact descriptions, see `custom-dataset-loader/README.md`.
 
