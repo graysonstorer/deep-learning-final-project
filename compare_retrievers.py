@@ -12,6 +12,8 @@ import torch
 from sentence_transformers import SentenceTransformer, util
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+from chat_prompting import prepare_tokenizer, render_chat_prompt
+
 
 REPO_ROOT = Path(__file__).resolve().parent
 DEFAULT_WILDBENCH_ROOT = REPO_ROOT / "WildGraphBench"
@@ -119,17 +121,11 @@ def generate_answer(
     context: str,
     max_new_tokens: int = 100,
 ) -> str:
-    prompt = f"""<|system|>
-You are a helpful assistant answering questions about the Marvel Cinematic Universe.
-</s>
-<|user|>
-Context:
-{context}
-
-Question: {question}
-</s>
-<|assistant|>
-"""
+    prompt = render_chat_prompt(
+        tokenizer=tokenizer,
+        question=question,
+        context=context,
+    )
     inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=1024).to(model.device)
     with torch.no_grad():
         output_ids = model.generate(
@@ -191,10 +187,12 @@ def load_lora_model(
 ) -> Tuple[AutoModelForCausalLM, AutoTokenizer]:
     from peft import PeftModel
 
-    tokenizer = AutoTokenizer.from_pretrained(base_model_name, trust_remote_code=True)
+    tokenizer = prepare_tokenizer(AutoTokenizer.from_pretrained(base_model_name, trust_remote_code=True))
     base_model = AutoModelForCausalLM.from_pretrained(base_model_name)
     adapter_path = resolve_lora_checkpoint(adapter_root)
     model = PeftModel.from_pretrained(base_model, str(adapter_path))
+    if tokenizer.pad_token_id is not None:
+        model.config.pad_token_id = tokenizer.pad_token_id
     model.to(device)
     model.eval()
     return model, tokenizer

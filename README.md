@@ -23,8 +23,11 @@ The repository also includes a separate dataset-construction module in `custom-d
 - `train_embeddings.py`: fine-tunes a pretrained retrieval model on a single `WildGraphBench` domain
 - `train_embeddings_all_subjects.py`: scales that fine-tuning workflow across multiple benchmark domains
 - `train_custom_retriever.py`: fine-tunes a new retrieval model from the custom dataset artifacts produced by `custom-dataset-loader/`
+- `chat_prompting.py`: shared chat-formatting helpers used to keep prompt semantics consistent across TinyLlama-style and tokenizer-native chat templates
 - `compare_retrievers.py`: compares the WildGraphBench retriever and the custom retriever on the WildGraphBench QA benchmark, with optional fixed-generator RAG evaluation
+- `compare_lora_models.py`: directly compares two saved LoRA-adapted chat models on the same `WildGraphBench` slice and writes a model-comparison CSV/plot
 - `tinyLM_LORA.py`: builds retrieved-context QA examples and LoRA fine-tunes TinyLlama
+- `llama32_LORA.py`: builds the same retrieved-context QA examples for `meta-llama/Llama-3.2-3B-Instruct` and LoRA fine-tunes that stronger model on the same benchmark slice
 - `lora_with_and_without_trained_embeddings.py`: compares downstream RAG quality with base vs. trained embeddings
 - `colab/`: thin Google Colab wrapper notebooks that mount Drive, verify prerequisites, and launch the canonical `.py` entry points without duplicating training logic
 - `Lora_trained_vs_untrained_embeddings.ipynb`, `train_embeddings.ipynb`, `transfer_learning.ipynb`, `transfer_learning_mistral.ipynb`: exploratory notebooks for training and comparison experiments
@@ -89,8 +92,12 @@ This keeps the `.py` files as the source of truth and avoids notebook-specific d
 
 - `colab/train_custom_retriever.ipynb` wraps `train_custom_retriever.py`
 - `colab/compare_retrievers.ipynb` wraps `compare_retrievers.py`
+- `colab/train_llama32_lora.ipynb` wraps `llama32_LORA.py`
+- `colab/compare_lora_models.ipynb` wraps `compare_lora_models.py`
 
 The notebooks assume you are using a Drive-backed copy of this repository. If your generated custom dataset artifacts already exist locally, the preferred path is to sync them into that Drive-backed repo and run the notebooks there. Only rerun the custom dataset pipeline if those generated artifacts are not available.
+
+For gated Hugging Face models such as `meta-llama/Llama-3.2-3B-Instruct`, the Colab wrapper exposes an optional `HF_TOKEN` step so you can authenticate before downloading the model if needed.
 
 ## Main Workflow
 
@@ -113,6 +120,17 @@ Run `tinyLM_LORA.py` to:
 - LoRA fine-tune TinyLlama on that data
 - log and plot training/evaluation loss
 
+### 2b. Fine-tune Llama 3.2 3B with the same retrieved-context pipeline
+
+Run `llama32_LORA.py` when you want a stronger generator model while keeping the rest of the experiment as close as possible to the TinyLlama baseline. This script:
+
+- uses the same `WildGraphBench` slice (`culture / Marvel Cinematic Universe`) by default
+- uses the same base MiniLM retrieval model to build retrieved-context training examples
+- keeps the same chunking, question loading, positive-chunk construction, train/test split, and LoRA-style fine-tuning flow unless hardware constraints force a small precision/device change
+- formats prompts through the tokenizer's native chat template when available, with a TinyLlama-compatible fallback preserved in `chat_prompting.py`
+
+The matching Colab wrapper is `colab/train_llama32_lora.ipynb`, which keeps the Python script as the source of truth and adds preflight checks before launching the full training run.
+
 ### 3. Compare baseline vs. trained retrieval
 
 Use `lora_with_and_without_trained_embeddings.py` and the accompanying notebooks/plots in `vis/` to compare:
@@ -120,6 +138,34 @@ Use `lora_with_and_without_trained_embeddings.py` and the accompanying notebooks
 - retrieval recall
 - answer quality under RAG
 - training behavior across epochs
+
+### 3b. Directly compare TinyLlama vs. Llama 3.2 after fine-tuning
+
+Use `compare_lora_models.py` when both LoRA runs already exist and you want a direct model-vs-model artifact without retraining either one. This script:
+
+- loads two saved PEFT adapter roots (for example `./tinyllama-lora-mcu` and `./llama32-3b-lora-mcu`)
+- evaluates both models on the same `WildGraphBench` slice with the same retriever, `k`, `limit`, and `n_gen`
+- saves a CSV summary of the comparison metrics
+- saves a plot that highlights downstream `Gen F1` for each model and, when available, overlays the saved eval-loss history from each checkpoint's `trainer_state.json`
+
+Example:
+
+```bash
+python3 compare_lora_models.py \
+  --repo_path WildGraphBench \
+  --domain culture \
+  --topic "Marvel Cinematic Universe" \
+  --embedder_path ./all_embeddings \
+  --embedder_label wildgraph \
+  --model_a_label TinyLlama \
+  --model_a_checkpoint ./tinyllama-lora-mcu \
+  --model_a_base_model "TinyLlama/TinyLlama-1.1B-Chat-v1.0" \
+  --model_b_label Llama-3.2-3B \
+  --model_b_checkpoint ./llama32-3b-lora-mcu \
+  --model_b_base_model "meta-llama/Llama-3.2-3B-Instruct"
+```
+
+The matching Colab wrapper is `colab/compare_lora_models.ipynb`.
 
 ### 4. Exploratory custom retriever experiment
 
@@ -166,8 +212,11 @@ python3 compare_retrievers.py \
   --wildgraph_embedder_path ./all_embeddings \
   --domain "<existing-domain>" \
   --topic "<existing-topic>" \
-  --lora_checkpoint ./tinyllama-lora-mcu
+  --lora_checkpoint ./tinyllama-lora-mcu \
+  --base_model_name "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 ```
+
+When you evaluate a non-TinyLlama LoRA adapter, pass the matching base model name with `--base_model_name`. `compare_retrievers.py` now renders prompts through the loaded tokenizer's chat template when available, so the same evaluation entry point can be reused for TinyLlama and Llama-family adapters.
 
 This was the recommended first comparison step before retraining LoRA on any new retriever, because it isolates retriever quality first.
 
