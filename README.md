@@ -167,6 +167,8 @@ python3 compare_lora_models.py \
 
 The matching Colab wrapper is `colab/compare_lora_models.ipynb`.
 
+On the current `culture / Marvel Cinematic Universe` comparison slice with the shared `./all_embeddings` retriever, `Llama-3.2-3B-Instruct` outperformed TinyLlama on downstream generation F1 (`0.1015` vs. `0.0883`) while retrieval recall stayed fixed at `Recall@3 = 0.52`. In other words, the stronger LoRA-tuned generator helped, but the gain was modest rather than dramatic.
+
 ### 4. Exploratory custom retriever experiment
 
 After building the custom corpus with `custom-dataset-loader/`, the main repo can train a new SentenceTransformer retriever **without recrawling**. This path was explored as an extension of the main workflow, but it is now documented primarily as a completed experiment rather than an active direction.
