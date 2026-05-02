@@ -1,0 +1,3 @@
+model_label,checkpoint_root,base_model_name,retriever_label,retriever_path,retrieval_recall,gen_f1,domain,topic,k,limit,n_gen
+TinyLlama,tinyllama-lora-mcu,TinyLlama/TinyLlama-1.1B-Chat-v1.0,wildgraph,./all_embeddings,0.52,0.09824766350400158,culture,Marvel Cinematic Universe,3,50,20
+Mistral-7B-Instruct,Mistral-7B-Instruct-LORA-MCU,mistralai/Mistral-7B-Instruct-v0.3,wildgraph,./all_embeddings,0.52,0.10277921651914275,culture,Marvel Cinematic Universe,3,50,20
