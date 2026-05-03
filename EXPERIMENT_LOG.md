@@ -46,6 +46,42 @@ At this stage, custom weak-supervision training is a valid and valuable first re
 
 ---
 
+
+## Entry 2: Comparing Token Accuracy and Generation F1 Scores on LoRA Fine-tuned Models
+
+### Objective
+Compare the perfomance of LoRA finetuned models on a held out subset of the WildGraphBench dataset. 
+
+### Custom Training Methodology
+- Base models: TinyLlama, LLama32, Mistral-7B
+- Training script / notebook:
+  -  `colab/compare_lora_models.ipynb`
+  -  `colab/train_llama32_lora.ipynb`
+  -  `colab/train_mistral7b_LORA.ipynb` 
+- Dataset artifacts used: `WildGraphBench/QA/culture/questions.jsonl`
+
+### Result Summary
+- Benchmark: WildGraphBench Marvel Cinematic Universe Q/A
+- Comparison artifact(s): `vis/all_3_comparison.csv`
+
+| Metric | TinyLlama | Llama32 | Mistral-7B |
+|---|---:|---:|---|
+| GenerationF1 | 0.093 | 0.119 | 0.099 |
+| Token Accuracy | 0.656 | 0.600 | 0.700 |
+
+### Interpretation
+Looks as if the added complexity of LLama32 and Mistal-7B add benefits but in different ways, Llama32 seems to have significantly better generation F1 while the raw token accuracy of Mistal-7B is the best by far. 
+Looking at training dynamics, it seems as if Mistal-7B started to overfit around epoch 4 of training which may have contributed to the less than stellar generation F1, especially considering how the smaller Llama32 had a better generation F1 score. 
+
+### Visuals
+- Training dynamics: `vis/all_3_comparison.png`
+
+### Takeaway
+Larger models do perform better (as expected). Going forward we should experiment to see how generation F1 changes with trained and untrained embeddings. 
+
+
+---
+
 ## Template For Future Entries
 
 ## Entry N: <short experiment name>
